@@ -212,35 +212,44 @@
         }
 
         // 2. Search Logic
-        searchInput.addEventListener('input', () => {
-            const query = searchInput.value;
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value;
 
-            if (query.length < 2) {
-                resultsArea.innerHTML = '<div class="loading-text">Waiting for input...</div>';
-                return;
-            }
+    if (query.length < 2) {
+        resultsArea.innerHTML = '<div class="loading-text">Waiting for input...</div>';
+        return;
+    }
 
-            const searchResult = fuse.search(query);
+    const searchResult = fuse.search(query);
 
-            if (searchResult.length > 0) {
-                const bestMatch = searchResult[0].item;
-                const isExact = query.toLowerCase() === bestMatch.name.toLowerCase();
+    if (searchResult.length > 0) {
+        // Instead of picking [0], we loop through all results
+        let htmlContent = `<p style="text-align:center; color:#7f8c8d; margin-bottom:15px;">
+                            Found ${searchResult.length} version(s)
+                           </p>`;
 
-                resultsArea.innerHTML = `
-                    <div class="card">
-                        ${!isExact ? `<span class="typo-tag">Did you mean:</span>` : ''}
-                        <h2 class="med-name">${bestMatch.name}</h2>
-                        <div class="category-badge">${bestMatch.category || 'General'}</div>
-                        <div class="instruction-section">
-                            <label>Usage Instructions</label>
-                            <p>${bestMatch.instructions || 'No instructions provided in sheet.'}</p>
-                        </div>
+        searchResult.forEach(result => {
+            const item = result.item;
+            const isExact = query.toLowerCase() === item.name.toLowerCase();
+
+            htmlContent += `
+                <div class="card" style="margin-bottom: 20px;">
+                    ${!isExact ? `<span class="typo-tag">Suggested Match:</span>` : ''}
+                    <h2 class="med-name">${item.name}</h2>
+                    <div class="category-badge">${item.category || 'General'}</div>
+                    <div class="instruction-section">
+                        <label>Usage Instructions</label>
+                        <p>${item.instructions || 'No instructions provided.'}</p>
                     </div>
-                `;
-            } else {
-                resultsArea.innerHTML = '<div class="loading-text">No match found in your records.</div>';
-            }
+                </div>
+            `;
         });
+
+        resultsArea.innerHTML = htmlContent;
+    } else {
+        resultsArea.innerHTML = '<div class="loading-text">No match found in your records.</div>';
+    }
+});
 
         // Start the app
         init();
@@ -248,6 +257,7 @@
 </body>
 
 </html>
+
 
 
 
