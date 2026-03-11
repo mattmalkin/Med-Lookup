@@ -121,6 +121,33 @@
             .pinned-card { box-shadow: none; border: 1px solid #eee; break-inside: avoid; }
         }
 
+/* --- DESKTOP SIDE-BY-SIDE LAYOUT --- */
+.content-wrapper {
+    display: flex;
+    gap: 30px; /* Space between the two columns */
+    align-items: flex-start; /* Prevents the columns from stretching awkwardly */
+    margin-top: 20px;
+}
+
+.search-box, .list-section {
+    flex: 1; /* Makes both columns take up exactly half the screen */
+}
+
+.list-section {
+    position: sticky;
+    top: 20px; /* The list stays on screen even when scrolling search results! */
+}
+
+/* --- MOBILE STACKED LAYOUT --- */
+@media (max-width: 768px) {
+    .content-wrapper {
+        flex-direction: column; /* Stacks them top-to-bottom on phones */
+    }
+    .list-section {
+        position: static; /* Removes the sticky effect on mobile */
+    }
+}
+
 /* --- DARK MODE SETTINGS --- */
 body.dark-theme {
     --primary: #6ab04c; /* Adjusted slightly for dark backgrounds */
