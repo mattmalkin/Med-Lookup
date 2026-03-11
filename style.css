@@ -38,6 +38,8 @@
             border-radius: 15px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             margin-bottom: 30px;
+            flex: 1; /* Keeps the search side a reasonable size */
+                    max-width: 500px; /* Stops the search bar from getting comically wide */
         }
 
         #medSearch {
@@ -95,6 +97,9 @@
             border-top: 2px dashed #ccc;
             padding-top: 20px;
             margin-top: 20px;
+            flex: 2; /* Lets the selected list take up twice as much space as the search box */
+            position: sticky;
+            top: 20px;
         }
 
         .remove-btn {
