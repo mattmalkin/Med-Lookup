@@ -144,6 +144,12 @@ body.dark-theme .card {
     border: 1px solid #2f3542;
 }
 
+body.dark-theme .category-badge {
+    color: #ffffff; /* This changes the text color to pure white */
+    background-color: #4a69bd; /* Optional: Changes the badge background color */
+    border: 1px solid #60a3bc; /* Optional: Adds a subtle border to make it pop */
+}
+
 /* The Toggle Button Styling */
 .theme-btn {
     position: absolute;
