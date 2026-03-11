@@ -10,9 +10,12 @@
         const printBtn = document.getElementById('printBtn');
         const listHeader = document.getElementById('listHeader');
 
-        async function init() {
+async function init() {
             try {
-                const response = await fetch(SHEET_URL);
+                // THE CACHE BUSTER: Adds a unique timestamp to force a fresh download
+                const cacheBuster = `?t=${new Date().getTime()}`;
+                const response = await fetch(SHEET_URL + cacheBuster);
+                
                 myDatabase = await response.json();
                 
                 fuse = new Fuse(myDatabase, {
@@ -25,6 +28,7 @@
                 document.getElementById('status').innerHTML = "✓ Database Online";
             } catch (error) {
                 document.getElementById('status').innerHTML = "✖ Error connecting to Sheets.";
+                console.error(error); // Added this so you can see exact errors in the console
             }
         }
 
@@ -37,11 +41,14 @@
                 let html = '';
                 results.forEach(res => {
                     const item = res.item;
+                    // THE EMPTY CELL FIX: Defaults to an empty string if the cell is blank
+                    const safeInstructions = item.instructions || 'No instructions provided.';
+                    
                     html += `
                         <div class="card search-result-card">
                             <h3 class="med-name">${item.name}</h3>
-                            <span class="category-badge">${item.category}</span>
-                            <p class="instruction-text">${item.instructions.substring(0, 80)}...</p>
+                            <span class="category-badge">${item.category || 'General'}</span>
+                            <p class="instruction-text">${safeInstructions.substring(0, 80)}...</p>
                             <button class="add-btn" onclick="addToList('${btoa(JSON.stringify(item))}')">Add to Request +</button>
                         </div>
                     `;
