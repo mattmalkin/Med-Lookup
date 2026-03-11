@@ -139,6 +139,7 @@ body.dark-theme #medSearch {
 }
 
 body.dark-theme .card {
+    background-color: #1e272e;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     border: 1px solid #2f3542;
 }
