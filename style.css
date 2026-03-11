@@ -120,3 +120,53 @@
             .container { max-width: 100%; }
             .pinned-card { box-shadow: none; border: 1px solid #eee; break-inside: avoid; }
         }
+
+/* --- DARK MODE SETTINGS --- */
+body.dark-theme {
+    --primary: #6ab04c; /* Adjusted slightly for dark backgrounds */
+    --accent: #48dbfb;
+    --bg: #12141c; /* Deep charcoal background */
+    --text: #dcdde1; /* Soft white text */
+    --white: #1e222d; /* Dark cards */
+    --success: #2ecc71;
+}
+
+/* Adjusting the search bar for dark mode */
+body.dark-theme #medSearch {
+    background-color: #2f3542;
+    color: white;
+    border-color: #57606f;
+}
+
+body.dark-theme .card {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    border: 1px solid #2f3542;
+}
+
+/* The Toggle Button Styling */
+.theme-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--white);
+    color: var(--text);
+    border: 1px solid #ddd;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+body.dark-theme .theme-btn {
+    border-color: #57606f;
+}
+
+@media print {
+    .theme-btn { display: none !important; }
+    /* Force print to always be light mode to save ink */
+    body { background: white !important; color: black !important; }
+    .card { background: white !important; border: 1px solid #ccc !important; }
+}
