@@ -18,9 +18,13 @@ async function init() {
         
         myDatabase = await response.json();
         
-        fuse = new Fuse(myDatabase, {
-            keys: ["name"],
-            threshold: 0.4
+ fuse = new Fuse(myDatabase, {
+            keys: [
+                "name", 
+                "category"
+            ],
+            threshold: 0.3, 
+            ignoreLocation: true 
         });
 
         searchInput.disabled = false;
