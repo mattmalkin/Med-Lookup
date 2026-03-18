@@ -54,7 +54,7 @@ searchInput.addEventListener('input', () => {
                     <h3 class="med-name">${item.name}</h3>
                     <span class="category-badge">${item.category || 'General'}</span>
                     <p class="instruction-text">${safeInstructions.substring(0, 80)}...</p>
-                    <button class="add-btn" onclick="addToList('${btoa(JSON.stringify(item))}')">Add to Request +</button>
+                    <button class="add-btn" onclick="addToList('${btoa(JSON.stringify(item))}')">Add to List +</button>
                 </div>
             `;
         });
