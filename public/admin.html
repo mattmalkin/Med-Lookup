@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PACPal | Secure Admin Dashboard</title>
+    <title>Secure Admin Dashboard</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f4f6f8; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .admin-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 700px; margin-bottom: 20px; }
@@ -14,31 +14,35 @@
         button { padding: 12px; background-color: #0984e3; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px;}
         button:hover { background-color: #74b9ff; }
         
-        /* Admin Management Styles */
-        .admin-list { list-style: none; padding: 0; margin-top: 15px; }
-        .admin-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9f9f9; border-radius: 6px; margin-bottom: 5px; font-family: monospace; font-size: 13px; }
-        .remove-btn { background: #ff7675; width: auto; padding: 5px 10px; font-size: 12px; margin: 0; }
-
         /* Action Buttons */
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
         .cancel-btn { background-color: #b2bec3; display: none; }
         .logout-btn { background-color: #d63031; margin-top: 0; width: auto; padding: 8px 15px; font-size: 14px; float: right;}
 
-        /* Alphabet Rolodex */
+        /* Admin Management Styles */
+        .admin-list { list-style: none; padding: 0; margin-top: 15px; }
+        .admin-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f9f9f9; border-radius: 6px; margin-bottom: 5px; font-family: monospace; font-size: 13px; }
+        .remove-btn { background: #ff7675; width: auto; padding: 5px 10px; font-size: 12px; margin: 0; border: none; border-radius: 4px; color: white; cursor: pointer; }
+
+        /* A-Z Rolodex Styles */
         .alphabet-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; justify-content: center; }
         .alpha-btn { width: 35px; height: 35px; padding: 0; margin: 0; background-color: #dfe6e9; color: #2d3436; font-size: 14px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
         .alpha-btn.active { background-color: #0984e3; color: white; }
 
-        /* Med List */
-        .med-list { list-style: none; padding: 0; }
+        /* Database List Styles */
+        .med-list { list-style: none; padding: 0; margin: 0; }
         .med-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #dfe6e9; }
         .med-info strong { font-size: 18px; color: #2d3436; display: block; }
-        .edit-btn { background-color: #00b894; width: auto; margin: 0; padding: 8px 12px; }
-        .delete-btn { background-color: #d63031; width: auto; margin: 0; padding: 8px 12px; }
+        .med-info span { font-size: 14px; color: #636e72; }
+        .med-actions { display: flex; gap: 10px; }
+        .edit-btn { background-color: #00b894; padding: 8px 12px; font-size: 14px; width: auto; margin: 0;}
+        .delete-btn { background-color: #d63031; padding: 8px 12px; font-size: 14px; width: auto; margin: 0;}
 
         #dataFormSection, #loginSection { display: none; }
-        .success { color: #00b894; text-align: center; font-weight: bold; }
-        .error { color: #d63031; text-align: center; font-weight: bold; }
+        #statusMessage, #loginError { margin-top: 15px; text-align: center; font-weight: bold; display: none; }
+        .success { color: #00b894; }
+        .error { color: #d63031; }
+        #emptyState { text-align: center; color: #b2bec3; font-style: italic; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -48,7 +52,7 @@
         <input type="email" id="loginEmail" placeholder="Email Address">
         <input type="password" id="loginPassword" placeholder="Password">
         <button onclick="login()">Log In</button>
-        <div id="loginError" class="error" style="display:none; margin-top:10px;"></div>
+        <div id="loginError" class="error"></div>
     </div>
 
     <div id="dataFormSection" style="width: 100%; max-width: 700px;">
@@ -57,10 +61,10 @@
             <button class="logout-btn" onclick="logout()">Log Out</button>
             <h2>System Access Control</h2>
             <div style="display: flex; gap: 10px;">
-                <input type="text" id="newAdminUid" placeholder="Enter new User UID to authorize">
-                <button onclick="addAdmin()" style="width: auto; margin-top: 5px;">Add Admin</button>
+                <input type="text" id="newAdminUid" placeholder="Authorize User UID">
+                <button onclick="addAdmin()" style="width: auto; margin-top: 5px; padding: 8px 15px;">Add</button>
             </div>
-            <ul id="admin-list" class="admin-list"><li>Loading...</li></ul>
+            <ul id="admin-list" class="admin-list"><li>Loading authorized users...</li></ul>
         </div>
 
         <div class="admin-container">
@@ -76,7 +80,7 @@
                     <button type="submit" id="submitBtn">Save to Database</button>
                     <button type="button" id="cancelBtn" class="cancel-btn" onclick="cancelEdit()">Cancel Edit</button>
                 </div>
-                <div id="statusMessage" style="margin-top:10px;"></div>
+                <div id="statusMessage"></div>
             </form>
         </div>
 
@@ -84,7 +88,7 @@
             <h2>Browse Database</h2>
             <div id="alphabetContainer" class="alphabet-container"></div>
             <ul id="databaseList" class="med-list"></ul>
-            <div id="emptyState" style="text-align:center; color:#ccc;">Select a letter to view medications.</div>
+            <div id="emptyState">Select a letter to view medications.</div>
         </div>
     </div>
 
@@ -110,14 +114,14 @@
         let currentResults = [];
         let editingId = null;
 
-        // --- AUTH & INITIALIZATION ---
+        // --- AUTHENTICATION ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 document.getElementById('loginSection').style.display = 'none';
                 document.getElementById('dataFormSection').style.display = 'block';
                 buildAlphabet(); 
                 fetchByLetter('A');
-                displayAdmins(); // Only run once logged in
+                displayAdmins(); // Initialize admin list only after login
             } else {
                 document.getElementById('loginSection').style.display = 'block';
                 document.getElementById('dataFormSection').style.display = 'none';
@@ -129,20 +133,25 @@
             const pass = document.getElementById('loginPassword').value;
             try {
                 await auth.signInWithEmailAndPassword(email, pass);
+                document.getElementById('loginError').style.display = 'none';
             } catch (error) {
-                document.getElementById('loginError').innerText = "Invalid credentials or unauthorized.";
+                document.getElementById('loginError').innerText = "Incorrect credentials or unauthorized.";
                 document.getElementById('loginError').style.display = 'block';
             }
         }
 
         function logout() { auth.signOut(); }
 
-        // --- ADMIN MANAGEMENT ---
+        // --- ADMIN MANAGEMENT LOGIC ---
         async function displayAdmins() {
             const list = document.getElementById('admin-list');
             try {
                 const snapshot = await db.collection("admins").get();
                 list.innerHTML = "";
+                if (snapshot.empty) {
+                    list.innerHTML = "<li>No admins found in database.</li>";
+                    return;
+                }
                 snapshot.forEach(doc => {
                     const li = document.createElement("li");
                     li.className = "admin-item";
@@ -150,7 +159,9 @@
                                    <button class="remove-btn" onclick="removeAdmin('${doc.id}')">Remove</button>`;
                     list.appendChild(li);
                 });
-            } catch (e) { list.innerHTML = "<li>Error: Insufficient Permissions</li>"; }
+            } catch (e) {
+                list.innerHTML = "<li>Error: Insufficient Permissions to view admins.</li>";
+            }
         }
 
         async function addAdmin() {
@@ -160,17 +171,19 @@
                 await db.collection("admins").doc(uid).set({});
                 document.getElementById('newAdminUid').value = "";
                 displayAdmins();
-            } catch (e) { alert("Permission Denied."); }
+            } catch (e) { alert("Permission Denied: Only existing admins can add others."); }
         }
 
         async function removeAdmin(uid) {
-            if(confirm("Remove this admin?")) {
-                await db.collection("admins").doc(uid).delete();
-                displayAdmins();
+            if (confirm(`Revoke admin access for ${uid}?`)) {
+                try {
+                    await db.collection("admins").doc(uid).delete();
+                    displayAdmins();
+                } catch (e) { alert("Permission Denied."); }
             }
         }
 
-        // --- DATABASE LOGIC ---
+        // --- ROLODEX LOGIC ---
         function buildAlphabet() {
             const container = document.getElementById('alphabetContainer');
             container.innerHTML = '';
@@ -186,35 +199,47 @@
         async function fetchByLetter(letter) {
             currentLetter = letter;
             buildAlphabet();
-            const list = document.getElementById('databaseList');
-            list.innerHTML = "<li>Loading...</li>";
+            const listElement = document.getElementById('databaseList');
+            const emptyState = document.getElementById('emptyState');
+            listElement.innerHTML = "<li>Loading...</li>";
+            emptyState.style.display = 'none';
+
             try {
                 const snapshot = await db.collection('medications')
-                    .where('name', '>=', letter).where('name', '<=', letter + '\uf8ff')
+                    .where('name', '>=', letter)
+                    .where('name', '<=', letter + '\uf8ff')
                     .orderBy('name').get();
                 currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderList();
-            } catch (e) { list.innerHTML = "<li class='error'>Error loading medications.</li>"; }
+            } catch (error) {
+                listElement.innerHTML = "<li class='error'>Error fetching data.</li>";
+            }
         }
 
         function renderList() {
-            const list = document.getElementById('databaseList');
-            const empty = document.getElementById('emptyState');
-            list.innerHTML = "";
-            empty.style.display = currentResults.length ? 'none' : 'block';
-            currentResults.forEach(med => {
-                const li = document.createElement('li');
-                li.className = 'med-item';
-                li.innerHTML = `<div class="med-info"><strong>${med.name}</strong><span>${med.category}</span></div>
-                                <div class="med-actions"><button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
-                                <button class="delete-btn" onclick="deleteMed('${med.id}')">Delete</button></div>`;
-                list.appendChild(li);
-            });
+            const listElement = document.getElementById('databaseList');
+            const emptyState = document.getElementById('emptyState');
+            if (currentResults.length === 0) {
+                listElement.innerHTML = '';
+                emptyState.style.display = 'block';
+                emptyState.innerText = `No medications starting with "${currentLetter}".`;
+                return;
+            }
+            listElement.innerHTML = currentResults.map(med => `
+                <li class="med-item">
+                    <div class="med-info"><strong>${med.name}</strong><span>${med.category}</span></div>
+                    <div class="med-actions">
+                        <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteMed('${med.id}')">Delete</button>
+                    </div>
+                </li>`).join('');
         }
 
         document.getElementById('addMedForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            const btn = document.getElementById('submitBtn');
             const status = document.getElementById('statusMessage');
+            btn.innerText = "Saving...";
             const medData = {
                 name: document.getElementById('medName').value,
                 category: document.getElementById('medCategory').value,
@@ -223,10 +248,17 @@
             try {
                 if (editingId) await db.collection('medications').doc(editingId).update(medData);
                 else await db.collection('medications').add(medData);
-                status.innerHTML = "<p class='success'>✓ Success!</p>";
+                status.innerText = "✓ Success!";
+                status.className = "success";
+                status.style.display = "block";
                 cancelEdit();
                 fetchByLetter(medData.name.charAt(0).toUpperCase());
-            } catch (e) { status.innerHTML = "<p class='error'>✖ Failed to save.</p>"; }
+                setTimeout(() => status.style.display = "none", 3000);
+            } catch (e) {
+                status.innerText = "✖ Save Failed.";
+                status.className = "error";
+                status.style.display = "block";
+            } finally { btn.innerText = editingId ? "Update Database" : "Save to Database"; }
         });
 
         function startEdit(id) {
@@ -250,7 +282,7 @@
         }
 
         async function deleteMed(id) {
-            if (confirm("Permanently delete?")) {
+            if (confirm("Permanently delete this medication?")) {
                 await db.collection('medications').doc(id).delete();
                 fetchByLetter(currentLetter);
             }
