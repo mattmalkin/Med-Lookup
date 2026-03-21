@@ -10,6 +10,3 @@ Click the Add file button near the top right, and select Create new file.
 Name the file exactly this: database.json
 Click into the large text area and paste the giant wall of text you copied in Step 1.
 Click the green Commit changes button.
-
-Step 3: Update your JavaScript (app.js)
-Now we get to delete that private link from your code completely, so it is never exposed on GitHub.
