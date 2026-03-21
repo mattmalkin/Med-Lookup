@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Secure Admin Dashboard</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f4f6f8; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .admin-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 700px; margin-bottom: 20px; }
+        h1, h2 { margin-top: 0; color: #2d3436; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #636e72; font-size: 14px; }
+        input, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #dfe6e9; border-radius: 6px; font-size: 16px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 100px; }
+        button { padding: 12px; background-color: #0984e3; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px;}
+        button:hover { background-color: #74b9ff; }
+        
+        /* Action Buttons */
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .cancel-btn { background-color: #b2bec3; display: none; }
+        .cancel-btn:hover { background-color: #dfe6e9; color: black; }
+        .logout-btn { background-color: #d63031; margin-top: 0; width: auto; padding: 8px 15px; font-size: 14px; float: right;}
+        .logout-btn:hover { background-color: #ff7675; }
+
+        /* A-Z Rolodex Styles */
+        .alphabet-container { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px; justify-content: center; }
+        .alpha-btn { width: 35px; height: 35px; padding: 0; margin: 0; background-color: #dfe6e9; color: #2d3436; font-size: 14px; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+        .alpha-btn:hover { background-color: #b2bec3; }
+        .alpha-btn.active { background-color: #0984e3; color: white; }
+
+        /* Database List Styles */
+        .med-list { list-style: none; padding: 0; margin: 0; }
+        .med-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #dfe6e9; }
+        .med-item:last-child { border-bottom: none; }
+        .med-info strong { font-size: 18px; color: #2d3436; display: block; }
+        .med-info span { font-size: 14px; color: #636e72; }
+        .med-actions { display: flex; gap: 10px; }
+        .edit-btn { background-color: #00b894; padding: 8px 12px; font-size: 14px; width: auto; margin: 0;}
+        .edit-btn:hover { background-color: #55efc4; }
+        .delete-btn { background-color: #d63031; padding: 8px 12px; font-size: 14px; width: auto; margin: 0;}
+        .delete-btn:hover { background-color: #ff7675; }
+
+        #dataFormSection, #loginSection { display: none; }
+        #statusMessage, #loginError { margin-top: 15px; text-align: center; font-weight: bold; display: none; }
+        .success { color: #00b894; }
+        .error { color: #d63031; }
+        #emptyState { text-align: center; color: #b2bec3; font-style: italic; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <div id="loginSection" class="admin-container">
+        <h1>PACPal Admin Login</h1>
+        <input type="email" id="loginEmail" placeholder="Email Address">
+        <input type="password" id="loginPassword" placeholder="Password">
+        <button onclick="login()">Log In</button>
+        <div id="loginError" class="error"></div>
+    </div>
+
+    <div id="dataFormSection" style="width: 100%; max-width: 700px;">
+        
+        <div class="admin-container">
+            <button class="logout-btn" onclick="logout()">Log Out</button>
+            <h1 id="formTitle">Add New Medication</h1>
+            
+            <form id="addMedForm">
+                <label>Medication Name</label>
+                <input type="text" id="medName" placeholder="e.g., Lisinopril" required>
+
+                <label>Category</label>
+                <input type="text" id="medCategory" placeholder="e.g., ACE Inhibitor" required>
+
+                <label>Perioperative Instructions</label>
+                <textarea id="medInstructions" placeholder="Enter instructions..." required></textarea>
+
+                <div class="btn-group">
+                    <button type="submit" id="submitBtn">Save to Database</button>
+                    <button type="button" id="cancelBtn" class="cancel-btn" onclick="cancelEdit()">Cancel Edit</button>
+                </div>
+                <div id="statusMessage"></div>
+            </form>
+        </div>
+
+        <div class="admin-container">
+            <h2>Browse Database</h2>
+            
+            <div id="alphabetContainer" class="alphabet-container"></div>
+
+            <ul id="databaseList" class="med-list">
+                </ul>
+            <div id="emptyState">Select a letter to view medications.</div>
+        </div>
+        
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5uz0RFyrCkxJocq8kZwFg_pcO2P6WTUg",
+            authDomain: "pacpal-9f9bf.firebaseapp.com",
+            projectId: "pacpal-9f9bf",
+            storageBucket: "pacpal-9f9bf.firebasestorage.app",
+            messagingSenderId: "993977477357",
+            appId: "1:993977477357:web:72a2c5dee83d40e4b7c4e4",
+            measurementId: "G-QMLLEV67R5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentLetter = 'A';
+        let currentResults = [];
+        let editingId = null;
+
+        // --- AUTHENTICATION ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dataFormSection').style.display = 'block';
+                buildAlphabet(); 
+                fetchByLetter('A'); // Load "A" automatically on login
+            } else {
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('dataFormSection').style.display = 'none';
+            }
+        });
+
+        async function login() {
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            try {
+                await auth.signInWithEmailAndPassword(email, pass);
+                document.getElementById('loginError').style.display = 'none';
+            } catch (error) {
+                document.getElementById('loginError').innerText = "Incorrect email or password.";
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function logout() { auth.signOut(); }
+
+        // --- ROLODEX LOGIC (The New Feature) ---
+        function buildAlphabet() {
+            const container = document.getElementById('alphabetContainer');
+            container.innerHTML = '';
+            const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+            
+            alphabet.forEach(letter => {
+                const btn = document.createElement('button');
+                btn.innerText = letter;
+                btn.className = 'alpha-btn';
+                if(letter === currentLetter) btn.classList.add('active');
+                
+                btn.onclick = () => fetchByLetter(letter);
+                container.appendChild(btn);
+            });
+        }
+
+        async function fetchByLetter(letter) {
+            currentLetter = letter;
+            buildAlphabet(); // Re-render alphabet to highlight the active letter
+            
+            const listElement = document.getElementById('databaseList');
+            const emptyState = document.getElementById('emptyState');
+            
+            listElement.innerHTML = "<li>Loading...</li>";
+            emptyState.style.display = 'none';
+
+            try {
+                // Fetch only medications starting with the selected letter
+                const snapshot = await db.collection('medications')
+                    .where('name', '>=', letter)
+                    .where('name', '<=', letter + '\uf8ff')
+                    .orderBy('name')
+                    .get();
+                
+                currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderList();
+            } catch (error) {
+                listElement.innerHTML = "<li class='error'>Error fetching data.</li>";
+                console.error(error);
+            }
+        }
+
+        // --- RENDER LIST ---
+        function renderList() {
+            const listElement = document.getElementById('databaseList');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (currentResults.length === 0) {
+                listElement.innerHTML = '';
+                emptyState.style.display = 'block';
+                emptyState.innerText = `No medications found starting with "${currentLetter}".`;
+                return;
+            }
+
+            let combinedHTML = '';
+            currentResults.forEach(med => {
+                combinedHTML += `
+                    <li class="med-item">
+                        <div class="med-info">
+                            <strong>${med.name}</strong>
+                            <span>${med.category}</span>
+                        </div>
+                        <div class="med-actions">
+                            <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
+                            <button class="delete-btn" onclick="deleteMed('${med.id}')">Delete</button>
+                        </div>
+                    </li>
+                `;
+            });
+            
+            listElement.innerHTML = combinedHTML;
+        }
+
+        // --- ADD OR UPDATE MEDICATION ---
+        document.getElementById('addMedForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const status = document.getElementById('statusMessage');
+            
+            btn.innerText = "Saving...";
+            
+            const medData = {
+                name: document.getElementById('medName').value,
+                category: document.getElementById('medCategory').value,
+                instructions: document.getElementById('medInstructions').value
+            };
+
+            try {
+                if (editingId) {
+                    await db.collection('medications').doc(editingId).update(medData);
+                    status.innerText = "✓ Medication updated!";
+                } else {
+                    await db.collection('medications').add(medData);
+                    status.innerText = "✓ Medication added!";
+                }
+                
+                status.className = "success";
+                status.style.display = "block";
+                cancelEdit(); 
+                
+                // Refresh the current letter's list so you instantly see your edit
+                fetchByLetter(medData.name.charAt(0).toUpperCase()); 
+                
+                setTimeout(() => { status.style.display = "none"; }, 3000);
+            } catch (error) {
+                status.innerText = "✖ Error: Could not save.";
+                status.className = "error";
+                status.style.display = "block";
+            } finally {
+                btn.innerText = editingId ? "Update Database" : "Save to Database";
+            }
+        });
+
+        // --- EDIT LOGIC ---
+        function startEdit(id) {
+            const med = currentResults.find(m => m.id === id);
+            
+            document.getElementById('medName').value = med.name;
+            document.getElementById('medCategory').value = med.category;
+            document.getElementById('medInstructions').value = med.instructions;
+            
+            editingId = id;
+            document.getElementById('formTitle').innerText = "Edit Medication: " + med.name;
+            document.getElementById('submitBtn').innerText = "Update Database";
+            document.getElementById('cancelBtn').style.display = "block";
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            document.getElementById('addMedForm').reset();
+            document.getElementById('formTitle').innerText = "Add New Medication";
+            document.getElementById('submitBtn').innerText = "Save to Database";
+            document.getElementById('cancelBtn').style.display = "none";
+        }
+
+        // --- DELETE LOGIC ---
+        async function deleteMed(id) {
+            if (confirm("Are you sure you want to permanently delete this medication?")) {
+                try {
+                    await db.collection('medications').doc(id).delete();
+                    fetchByLetter(currentLetter); // Refresh the current view
+                } catch (error) {
+                    alert("Error deleting medication.");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
