@@ -114,19 +114,24 @@
         let currentResults = [];
         let editingId = null;
 
-        // --- AUTHENTICATION ---
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                document.getElementById('loginSection').style.display = 'none';
-                document.getElementById('dataFormSection').style.display = 'block';
-                buildAlphabet(); 
-                fetchByLetter('A');
-                displayAdmins(); // Initialize admin list only after login
-            } else {
-                document.getElementById('loginSection').style.display = 'block';
-                document.getElementById('dataFormSection').style.display = 'none';
-            }
-        });
+// --- AUTH & INITIALIZATION ---
+auth.onAuthStateChanged(async (user) => { // Added 'async'
+    if (user) {
+        document.getElementById('loginSection').style.display = 'none';
+        document.getElementById('dataFormSection').style.display = 'block';
+        buildAlphabet(); 
+        fetchByLetter('A');
+        
+        // Give the security token 500ms to "warm up" before checking the admin list
+        setTimeout(() => {
+            displayAdmins(); 
+        }, 500);
+        
+    } else {
+        document.getElementById('loginSection').style.display = 'block';
+        document.getElementById('dataFormSection').style.display = 'none';
+    }
+});
 
         async function login() {
             const email = document.getElementById('loginEmail').value;
