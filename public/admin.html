@@ -137,20 +137,33 @@
 
         // --- ADMIN LIST LOGIC ---
         async function displayAdmins() {
-            const listElement = document.getElementById('admin-list');
-            try {
-                const snapshot = await db.collection("admins").get();
-                listElement.innerHTML = "";
-                snapshot.forEach(doc => {
-                    const li = document.createElement("li");
-                    li.className = "admin-item";
-                    li.textContent = `UID: ${doc.id}`;
-                    listElement.appendChild(li);
-                });
-            } catch (error) {
-                listElement.innerHTML = "<li class='error'>Access Denied: UID not found in admins collection.</li>";
-            }
-        }
+    const listElement = document.getElementById('admin-list');
+    try {
+        const snapshot = await db.collection("admins").get();
+        listElement.innerHTML = "";
+        
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            // Fallback to "Unnamed Admin" if the field is missing
+            const adminName = data.name || "Unnamed Admin"; 
+            
+            const li = document.createElement("li");
+            li.className = "admin-item";
+            
+            // Displays Name in bold and UID in smaller text
+            li.innerHTML = `
+                <div>
+                    <strong>${adminName}</strong><br>
+                    <span style="font-size: 10px; color: #b2bec3;">ID: ${doc.id}</span>
+                </div>
+            `;
+            listElement.appendChild(li);
+        });
+    } catch (error) {
+        console.error("Admin fetch error:", error);
+        listElement.innerHTML = "<li class='error'>Access Denied: Could not load admin names.</li>";
+    }
+}
 
         // --- ROLODEX & MEDICATION LOGIC ---
         function buildAlphabet() {
