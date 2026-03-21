@@ -291,6 +291,33 @@
                 }
             }
         }
+        // Function to fetch and display current admins
+async function displayAdmins() {
+  const adminListElement = document.getElementById('admin-list');
+  
+  try {
+    const querySnapshot = await db.collection("admins").get();
+    adminListElement.innerHTML = ""; // Clear the loading message
+
+    if (querySnapshot.empty) {
+      adminListElement.innerHTML = "<li>No admins found in the collection.</li>";
+      return;
+    }
+
+    querySnapshot.forEach((doc) => {
+      // doc.id is the User UID we stored
+      const li = document.createElement("li");
+      li.textContent = `Admin UID: ${doc.id}`;
+      adminListElement.appendChild(li);
+    });
+  } catch (error) {
+    console.error("Error fetching admins:", error);
+    adminListElement.innerHTML = "<li>Access Denied: You must be an admin to see this list.</li>";
+  }
+}
+
+// Run this when the page loads
+displayAdmins();
     </script>
 </body>
 </html>
