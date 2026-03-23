@@ -3,56 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Admin Dashboard</title>
+    <title>PACPal Admin - Medication Management</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="loginSection" class="admin-container">
-        <h1>PACPal Admin Login</h1>
-        <input type="email" id="loginEmail" placeholder="Email Address">
-        <input type="password" id="loginPassword" placeholder="Password">
-        <button onclick="login()">Log In</button>
-        <div id="loginError" class="error"></div>
-    </div>
-
-    <div id="dataFormSection" style="width: 100%; max-width: 700px;">
-        
-        <div class="admin-container">
-            <button class="logout-btn" onclick="logout()">Log Out</button>
-            <h2>System Access Control</h2>
-            <p style="font-size: 12px; color: #636e72;">Authorized UIDs in the 'admins' collection:</p>
-            <ul id="admin-list" class="admin-list"><li>Loading...</li></ul>
+    <div class="admin-container">
+        <div class="controls">
+            <button id="theme-toggle" class="theme-btn">🌓 Toggle Dark Mode</button>
+            <button onclick="logout()" class="logout-btn">Logout</button>
         </div>
 
-        <div class="admin-container">
+        <header>
             <h1 id="formTitle">Add New Medication</h1>
-            <form id="addMedForm">
-                <label>Medication Name</label>
-                <input type="text" id="medName" placeholder="e.g., Lisinopril" required>
-                <label>Category</label>
-                <input type="text" id="medCategory" placeholder="e.g., ACE Inhibitor" required>
-                <label>Perioperative Instructions</label>
-                <textarea id="medInstructions" placeholder="Enter instructions..." required></textarea>
-                <div class="btn-group">
-                    <button type="submit" id="submitBtn">Save to Database</button>
-                    <button type="button" id="cancelBtn" class="cancel-btn" onclick="cancelEdit()">Cancel Edit</button>
-                </div>
-                <div id="statusMessage"></div>
-            </form>
-        </div>
+        </header>
 
-        <div class="admin-container">
-            <h2>Browse Database</h2>
+        <section id="loginSection">
+            <div class="card">
+                <input type="email" id="loginEmail" placeholder="Admin Email">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button onclick="login()" class="primary-btn">Login to PACPal</button>
+                <p id="loginError" class="error" style="display:none;"></p>
+            </div>
+        </section>
+
+        <section id="dataFormSection">
+            <form id="addMedForm" class="card">
+                <label>Medication Name</label>
+                <input type="text" id="medName" required placeholder="e.g. Lisinopril">
+
+                <label>Category</label>
+                <input type="text" id="medCategory" required placeholder="e.g. ACE Inhibitor">
+
+                <label>Clinical Instructions</label>
+                <textarea id="medInstructions" required placeholder="Dosage, timing, and safety warnings..."></textarea>
+
+                <div class="btn-group">
+                    <button type="submit" id="submitBtn" class="add-btn">Save to Database</button>
+                    <button type="button" id="cancelBtn" onclick="cancelEdit()" class="cancel-btn" style="display:none;">Cancel Edit</button>
+                </div>
+            </form>
+
+            <hr>
+
+            <h2>Current Medications</h2>
             <div id="alphabetContainer" class="alphabet-container"></div>
             <ul id="databaseList" class="med-list"></ul>
-            <div id="emptyState" style="text-align: center; color: #b2bec3; font-style: italic; margin-top: 20px;">Select a letter to view medications.</div>
-        </div>
+            <p id="emptyState" style="display:none;">No medications found for this letter.</p>
+
+            <hr>
+
+            <h2>Authorized Admins</h2>
+            <ul id="admin-list" class="admin-list"></ul>
+        </section>
     </div>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-<script src="admin.js"></script>
-    
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <script src="admin.js"></script>
 </body>
 </html>
