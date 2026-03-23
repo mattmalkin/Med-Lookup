@@ -201,28 +201,41 @@
                     <div class="med-info"><strong>${med.name}</strong><span>${med.category}</span></div>
                     <div class="med-actions">
                         <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
-                        <button class="delete-btn" onclick="deleteMed('${med.id}')">Delete</button>
+                        <button class="delete-btn" onclick="deleteMed('${med.id}', '${med.name}')">Delete</button>
                     </div>
                 </li>`).join('');
         }
 
-        document.getElementById('addMedForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            btn.innerText = "Saving...";
-            const medData = {
-                name: document.getElementById('medName').value,
-                category: document.getElementById('medCategory').value,
-                instructions: document.getElementById('medInstructions').value
-            };
-            try {
-                if (editingId) await db.collection('medications').doc(editingId).update(medData);
-                else await db.collection('medications').add(medData);
-                cancelEdit();
-                fetchByLetter(medData.name.charAt(0).toUpperCase());
-            } catch (e) { alert("Error: Could not save."); }
-            finally { btn.innerText = editingId ? "Update Database" : "Save to Database"; }
-        });
+document.getElementById('addMedForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    // 1. Get the raw input and trim hidden spaces
+    const rawName = document.getElementById('medName').value.trim();
+    
+    // 2. THE FIX: Force Title Case (e.g., "lisinopril" -> "Lisinopril")
+    // .charAt(0).toUpperCase() handles the first letter
+    // .slice(1).toLowerCase() ensures the rest isn't accidentally ALL CAPS
+    const sanitizedName = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+
+    // 3. Use 'sanitizedName' instead of the raw input
+    const medData = {
+        name: sanitizedName, 
+        category: document.getElementById('medCategory').value.trim(),
+        instructions: document.getElementById('medInstructions').value.trim()
+    };
+
+    try {
+        await db.collection('medications').add(medData);
+        alert(`${sanitizedName} added successfully!`);
+        document.getElementById('addMedForm').reset();
+        
+        // Refresh the list so you see the new med immediately
+        fetchByLetter(sanitizedName.charAt(0)); 
+    } catch (error) {
+        console.error("Error adding medication: ", error);
+        alert("Failed to add medication. check console.");
+    }
+});
 
         function startEdit(id) {
             const med = currentResults.find(m => m.id === id);
@@ -245,24 +258,16 @@
         }
 
         async function deleteMed(id, medName) {
-    // 1. The Warning Popup
-    const message = `⚠️ WARNING: Are you sure you want to permanently delete "${medName}"? \n\nThis action cannot be undone.`;
+    // Now medName will contain "Lisinopril" instead of "undefined"
+    const message = `⚠️ WARNING: Are you sure you want to permanently delete "${medName}"?`;
     
     if (confirm(message)) {
         try {
-            // 2. Only runs if they click "OK"
             await db.collection('medications').doc(id).delete();
-            console.log(`${medName} deleted successfully.`);
-            
-            // 3. Refresh the list to show it's gone
-            fetchByLetter(currentLetter); 
+            fetchByLetter(currentLetter); // Refresh the list
         } catch (error) {
-            alert("Error: Could not delete medication. Check your connection.");
-            console.error("Delete error:", error);
+            alert("Error: Could not delete.");
         }
-    } else {
-        // 4. Runs if they click "Cancel"
-        console.log("Delete cancelled by user.");
     }
 }
     </script>
