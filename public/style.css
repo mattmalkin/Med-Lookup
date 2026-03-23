@@ -1,256 +1,124 @@
-        :root {
-            --primary: #2c3e50;
-            --accent: #3498db;
-            --bg: #f4f7f6;
-            --text: #333;
-            --success: #27ae60;
-            --warning: #e67e22;
-            --white: #ffffff;
-            --danger: #e74c3c;
-        }
-
-        body {
-            font-family: 'Inter', system-ui, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .container {
-    max-width: 1600px; /* Drastically increases the maximum width */
-    width: 95%; /* Tells it to take up 95% of the available screen space */
-    margin: 0 auto; /* Keeps the whole app perfectly centered */
-    
-    /* Keep your existing padding, background, or border-radius down here! */
-    padding: 20px; 
+/* --- 1. THEME VARIABLES --- */
+:root {
+    --primary: #2c3e50;
+    --accent: #3498db;
+    --bg: #f4f7f6;
+    --text: #333;
+    --success: #27ae60;
+    --warning: #e67e22;
+    --white: #ffffff;
+    --danger: #e74c3c;
+    --border: #dfe6e9;
+    --shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
-        header { text-align: center; margin-bottom: 30px; }
-        
-        /* Search Section */
-        .search-box {
-            background: var(--white);
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            margin-bottom: 30px;
-            flex: 1; /* Keeps the search side a reasonable size */
-                    max-width: 500px; /* Stops the search bar from getting comically wide */
-        }
-
-        #medSearch {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            outline: none;
-            box-sizing: border-box;
-        }
-
-        /* Results Area */
-        #searchResults { margin-top: 15px; }
-        
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 10px;
-            position: relative;
-            border-left: 5px solid transparent;
-        }
-
-        .search-result-card { border-left-color: var(--accent); }
-        .pinned-card { border-left-color: var(--success); }
-
-        .med-name { margin: 0; font-size: 22px; color: var(--primary); }
-        .category-badge {
-            font-size: 11px;
-            background: #e1f5fe;
-            color: var(--accent);
-            padding: 3px 10px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-
-        .instruction-text { font-size: 15px; line-height: 1.5; margin: 10px 0; }
-
-        .add-btn {
-            background: var(--success);
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        /* The List Section */
-        .list-section {
-            width: 100%;
-            border-top: 2px dashed #ccc;
-            padding-top: 20px;
-            margin-top: 20px;
-            flex: 2; /* Lets the selected list take up twice as much space as the search box */
-            position: sticky;
-            top: 20px;
-        }
-
-        .remove-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            color: var(--danger);
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        #printBtn {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-            padding: 15px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-top: 20px;
-            display: none;
-        }
-
-        @media print {
-            .search-box, .remove-btn, #printBtn { display: none; }
-            body { background: white; padding: 0; }
-            .container { max-width: 100%; }
-            .pinned-card { box-shadow: none; border: 1px solid #eee; break-inside: avoid; }
-        }
-
-/* --- DESKTOP SIDE-BY-SIDE LAYOUT --- */
-.content-wrapper {
-    display: flex;
-    gap: 30px; /* Space between the two columns */
-    align-items: flex-start; /* Prevents the columns from stretching awkwardly */
-    margin-top: 20px;
-}
-
-.search-box, .list-section {
-    flex: 1; /* Makes both columns take up exactly half the screen */
-}
-
-.list-section {
-    position: sticky;
-    top: 20px; /* The list stays on screen even when scrolling search results! */
-}
-
-/* --- MOBILE STACKED LAYOUT --- */
-@media (max-width: 768px) {
-    .content-wrapper {
-        flex-direction: column; /* Stacks them top-to-bottom on phones */
-    }
-    /* Forces both sections to fill the whole screen on mobile */
-    .search-box, .list-section {
-        max-width: 100%; 
-        width: 100%;
-    }
-        .list-section {
-        position: static; /* Removes the sticky effect on mobile */
-    }
-}
-
-/* --- DARK MODE SETTINGS --- */
 body.dark-theme {
-    --primary: #6ab04c; /* Adjusted slightly for dark backgrounds */
+    --primary: #6ab04c;
     --accent: #48dbfb;
-    --bg: #12141c; /* Deep charcoal background */
-    --text: #dcdde1; /* Soft white text */
-    --white: #1e222d; /* Dark cards */
+    --bg: #12141c;
+    --text: #dcdde1;
+    --white: #1e222d;
     --success: #2ecc71;
+    --border: #2f3542;
 }
 
-/* Adjusting the search bar for dark mode */
-body.dark-theme #medSearch {
-    background-color: #2f3542;
-    color: white;
-    border-color: #57606f;
+/* --- 2. CORE LAYOUT --- */
+body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: background 0.3s ease;
 }
 
-body.dark-theme .card {
-    background-color: #1e272e;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    border: 1px solid #2f3542;
+.container, .admin-container {
+    max-width: 1600px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 20px;
 }
 
-body.dark-theme .category-badge {
-    color: #ffffff; /* This changes the text color to pure white */
-    background-color: #4a69bd; /* Optional: Changes the badge background color */
-    border: 1px solid #60a3bc; /* Optional: Adds a subtle border to make it pop */
+.admin-container { max-width: 800px; } /* Slightly tighter for forms */
+
+/* --- 3. SHARED COMPONENTS (Cards & Lists) --- */
+.card, .med-item, .admin-item, .search-box {
+    background: var(--white);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
 }
 
-/* The Toggle Button Styling */
+.med-item { display: flex; justify-content: space-between; align-items: center; }
+.admin-item { font-family: monospace; font-size: 13px; }
 
-body.dark-theme .theme-btn {
-    border-color: #57606f;
+/* --- 4. FORM ELEMENTS --- */
+label { display: block; margin-top: 15px; font-weight: bold; color: var(--primary); font-size: 14px; }
+
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin-top: 5px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text);
+    font-size: 16px;
+    box-sizing: border-box;
+    outline: none;
+}
+
+textarea { resize: vertical; height: 100px; }
+
+/* --- 5. BUTTONS (Shared & Specific) --- */
+button, .theme-btn, .admin-button {
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+/* Primary Actions */
+.primary-btn, .theme-btn, .save-btn { background: var(--accent); color: white; width: 100%; }
+.add-btn { background: var(--success); color: white; }
+.edit-btn { background: #00b894; color: white; }
+
+/* Danger/Logout Actions */
+.delete-btn, .logout-btn { background: var(--danger); color: white; }
+.remove-btn { background: #ff7675; padding: 5px 10px; font-size: 12px; }
+
+/* Controls/Top Buttons */
+.controls { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; margin-bottom: 30px; width: 100%; }
+
+/* --- 6. ROLODEX (A-Z) --- */
+.alphabet-container { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; justify-content: center; }
+.alpha-btn {
+    width: 38px; height: 38px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    color: var(--accent);
+}
+.alpha-btn.active { background: var(--accent); color: white; }
+
+/* --- 7. PATIENT SIDE-BY-SIDE & PRINT --- */
+.content-wrapper { display: flex; gap: 30px; width: 100%; }
+.search-box, .list-section { flex: 1; }
+.list-section { position: sticky; top: 20px; }
+
+@media (max-width: 768px) {
+    .content-wrapper { flex-direction: column; }
+    .list-section { position: static; }
 }
 
 @media print {
-    .theme-btn { display: none !important; }
-    /* Force print to always be light mode to save ink */
+    .search-box, .remove-btn, #printBtn, .controls, .alphabet-container, .admin-actions { display: none !important; }
     body { background: white !important; color: black !important; }
-    .card { background: white !important; border: 1px solid #ccc !important; }
-}
-
-
-/* --- Controls Container (Pushed to the Right) --- */
-.controls {
-    display: flex;
-    flex-direction: column; /* Keeps them stacked */
-    align-items: flex-end;    /* Pushes the stack to the right side */
-    gap: 12px;
-    margin-bottom: 30px;
-    padding-right: 20px;    /* Prevents the buttons from touching the screen edge */
-}
-
-/* --- Shared Button Styling --- */
-.theme-btn, .admin-button {
-    width: 160px;           /* Slightly narrower often looks better on the side */
-    padding: 10px;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 13px;        /* Small font for a cleaner side-bar look */
-    text-align: center;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-/* --- Theme Button Colors --- */
-.theme-btn {
-    background-color: #0984e3; /* Professional blue */
-    color: white;
-}
-
-.theme-btn:hover {
-    background-color: #74b9ff;
-}
-
-/* --- Admin Button Colors --- */
-.admin-button {
-    background-color: #636e72; /* Subtle slate gray */
-    color: white;
-}
-
-.admin-button:hover {
-    background-color: #2d3436;
+    .card { box-shadow: none !important; border: 1px solid #ccc !important; }
 }
