@@ -42,7 +42,10 @@ body {
     padding: 20px;
 }
 
-.admin-container { max-width: 800px; } /* Slightly tighter for forms */
+/* Specific override for the Admin Dashboard to keep it from stretching */
+.admin-container { 
+    max-width: 800px; 
+} 
 
 /* --- 3. SHARED COMPONENTS (Cards & Lists) --- */
 .card, .med-item, .admin-item, .search-box {
@@ -75,62 +78,50 @@ input, textarea {
 
 textarea { resize: vertical; height: 100px; }
 
-/* 1. SHARED BUTTON LOOK (Colors, Rounded Corners) */
-.theme-btn, .admin-button {
-    width: 140px !important; /* 👈 Forces a specific, compact width */
-    padding: 8px 12px;       /* Tighter vertical padding */
-    font-size: 13px;         /* Smaller, clinical font size */
+/* --- 5. BUTTONS & CONTROLS --- */
+
+/* Base button style - Default to "Shrink-Wrap" width */
+button, .theme-btn, .admin-button {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    white-space: nowrap;     /* Prevents text from wrapping */
+    width: auto;           /* Prevents the giant blue bar */
+    min-width: 140px;      /* Keeps buttons professional and clickable */
+    text-decoration: none; /* For the Admin Portal link */
 }
 
-/* 2. ADMIN FORM OVERRIDE (Large Action Buttons) */
-.admin-container .add-btn, 
-.admin-container .save-btn,
-#loginSection .primary-btn {
-    width: 100%; /* 👈 Only the main Admin/Login buttons stay big */
-    margin-top: 15px;
-    padding: 12px;
-}
-
-/* 3. INDEX/CONTROLS OVERRIDE (Small Utility Buttons) */
-.controls button, .admin-button {
-    width: 160px; /* 👈 Keeps the "Theme" and "Admin" buttons a neat, consistent size */
-    font-size: 13px;
-}
-
-/* 4. PRINT BUTTON (On Index) */
-#printBtn {
-    width: auto;
-    min-width: 200px; /* Gives it presence without filling the whole screen */
-    margin: 20px auto;
-    display: block; /* Centers it */
-}
-
-/* Primary Actions */
-.primary-btn, .theme-btn, .save-btn { background: var(--accent); color: white; width: 100%; }
-.add-btn { background: var(--success); color: white; }
-.edit-btn { background: #00b894; color: white; }
-
-/* Danger/Logout Actions */
-.delete-btn, .logout-btn { background: var(--danger); color: white; }
-.remove-btn { background: #ff7675; padding: 5px 10px; font-size: 12px; }
-
-/* This targets the button specifically to stop the "Giant Blue Bar" */
-#theme-toggle {
-    width: auto;           /* Only as wide as the text/icon */
-    min-width: 140px;      /* But keeps it a nice clickable size */
-    margin: 10px 0;        /* Adds a little breathing room */
-    align-self: flex-end;  /* 👈 THE MAGIC LINE: Pushes it to the side and stops stretching */
-}
-
-/* Ensure the controls container isn't forcing children to stretch */
+/* Controls Container (The top right corner) */
 .controls {
     display: flex;
     flex-direction: column;
-    align-items: flex-end; /* Pushes everything inside to the right */
+    align-items: flex-end; /* Pushes buttons to the right */
+    gap: 10px;
+    margin-bottom: 20px;
     width: 100%;
-    max-width: 1600px;     /* Matches your main container */
+    max-width: 1600px;
+}
+
+/* Specific button colors */
+.primary-btn, .theme-btn, .save-btn { background: var(--accent); color: white; }
+.add-btn { background: var(--success); color: white; }
+.edit-btn { background: #00b894; color: white; }
+.delete-btn, .logout-btn { background: var(--danger); color: white; }
+.remove-btn { background: #ff7675; padding: 5px 10px; font-size: 12px; }
+.admin-button { background-color: #636e72; color: white; }
+
+/* Force large action buttons ONLY in the Admin form */
+.admin-container .add-btn, 
+.admin-container .save-btn,
+#loginSection .primary-btn {
+    width: 100%; 
+    margin-top: 15px;
+    padding: 12px;
 }
 
 /* --- 6. ROLODEX (A-Z) --- */
@@ -140,6 +131,7 @@ textarea { resize: vertical; height: 100px; }
     background: var(--white);
     border: 1px solid var(--border);
     color: var(--accent);
+    min-width: unset; /* Rolodex buttons don't need the 140px min-width */
 }
 .alpha-btn.active { background: var(--accent); color: white; }
 
@@ -147,6 +139,9 @@ textarea { resize: vertical; height: 100px; }
 .content-wrapper { display: flex; gap: 30px; width: 100%; }
 .search-box, .list-section { flex: 1; }
 .list-section { position: sticky; top: 20px; }
+
+/* Search box specific sizing */
+.search-box { max-width: 500px; }
 
 @media (max-width: 768px) {
     .content-wrapper { flex-direction: column; }
@@ -159,29 +154,27 @@ textarea { resize: vertical; height: 100px; }
     .card { box-shadow: none !important; border: 1px solid #ccc !important; }
 }
 
-/* --- Admin-Only Compact Overrides --- */
+/* --- 8. ADMIN COMPACT OVERRIDES --- */
 .admin-container input, 
 .admin-container textarea {
-    padding: 8px 12px; /* Reduced from 15px */
-    font-size: 14px;    /* Slightly smaller for data entry */
+    padding: 8px 12px;
+    font-size: 14px;
     margin-top: 4px;
 }
 
 .admin-container button {
-    padding: 8px 16px; /* Tighter button height */
+    padding: 8px 16px;
     font-size: 14px;
-    width: auto;       /* Prevents buttons from stretching 100% width unless needed */
-    min-width: 120px;
 }
 
-/* Ensure the main Submit button stays prominent but not "huge" */
+/* Specifically keep the Admin Submit button easy to see */
 .admin-container .add-btn {
-    width: 100%;       /* Keeps the primary action easy to hit */
+    width: 100%;
     margin-top: 20px;
     padding: 12px;
 }
 
 .admin-container label {
-    margin-top: 10px;  /* Reduces the gap between form fields */
+    margin-top: 10px;
     font-size: 13px;
 }
