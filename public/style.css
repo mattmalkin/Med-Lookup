@@ -122,3 +122,30 @@ button, .theme-btn, .admin-button {
     body { background: white !important; color: black !important; }
     .card { box-shadow: none !important; border: 1px solid #ccc !important; }
 }
+
+/* --- Admin-Only Compact Overrides --- */
+.admin-container input, 
+.admin-container textarea {
+    padding: 8px 12px; /* Reduced from 15px */
+    font-size: 14px;    /* Slightly smaller for data entry */
+    margin-top: 4px;
+}
+
+.admin-container button {
+    padding: 8px 16px; /* Tighter button height */
+    font-size: 14px;
+    width: auto;       /* Prevents buttons from stretching 100% width unless needed */
+    min-width: 120px;
+}
+
+/* Ensure the main Submit button stays prominent but not "huge" */
+.admin-container .add-btn {
+    width: 100%;       /* Keeps the primary action easy to hit */
+    margin-top: 20px;
+    padding: 12px;
+}
+
+.admin-container label {
+    margin-top: 10px;  /* Reduces the gap between form fields */
+    font-size: 13px;
+}
