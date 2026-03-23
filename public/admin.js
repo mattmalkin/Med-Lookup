@@ -10,6 +10,26 @@ const firebaseConfig = {
     appId: "1:993977477357:web:72a2c5dee83d40e4b7c4e4"
 };
 
+const themeBtn = document.getElementById('theme-toggle');
+const body = document.body;
+
+// 1. Check for saved preference on load
+if (localStorage.getItem('theme') === 'dark') {
+    body.classList.add('dark-theme');
+}
+
+// 2. Listen for clicks
+themeBtn.addEventListener('click', () => {
+    body.classList.toggle('dark-theme');
+    
+    // 3. Save the preference so it stays dark on refresh
+    if (body.classList.contains('dark-theme')) {
+        localStorage.setItem('theme', 'dark');
+    } else {
+        localStorage.setItem('theme', 'light');
+    }
+});
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
