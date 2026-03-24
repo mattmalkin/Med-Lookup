@@ -13,22 +13,27 @@ const firebaseConfig = {
 const themeBtn = document.getElementById('theme-toggle');
 const body = document.body;
 
-// 1. Check for saved preference on load
-if (localStorage.getItem('theme') === 'dark') {
+// --- UNIFIED DARK MODE LOGIC ---
+const themeToggle = document.getElementById('themeToggle');
+const body = document.body;
+
+// 1. Apply saved theme immediately on page load
+if (localStorage.getItem('pacpal_theme') === 'dark') {
     body.classList.add('dark-theme');
+    if (themeToggle) themeToggle.innerText = '☀️ Light Mode';
 }
 
 // 2. Listen for clicks
-themeBtn.addEventListener('click', () => {
-    body.classList.toggle('dark-theme');
-    
-    // 3. Save the preference so it stays dark on refresh
-    if (body.classList.contains('dark-theme')) {
-        localStorage.setItem('theme', 'dark');
-    } else {
-        localStorage.setItem('theme', 'light');
-    }
-});
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        body.classList.toggle('dark-theme');
+        const isDark = body.classList.contains('dark-theme');
+        
+        // 3. Save preference & update button text
+        localStorage.setItem('pacpal_theme', isDark ? 'dark' : 'light');
+        themeToggle.innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+    });
+}
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
