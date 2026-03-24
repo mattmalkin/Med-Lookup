@@ -10,9 +10,6 @@ const firebaseConfig = {
     appId: "1:993977477357:web:72a2c5dee83d40e4b7c4e4"
 };
 
-const themeBtn = document.getElementById('theme-toggle');
-const body = document.body;
-
 // --- UNIFIED DARK MODE LOGIC ---
 const themeToggle = document.getElementById('themeToggle');
 const body = document.body;
