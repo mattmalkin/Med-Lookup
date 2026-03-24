@@ -18,8 +18,17 @@
             <ul id="admin-list" class="admin-list"></ul>
             <hr>
             <h2>System Controls</h2>
-            <button id="notifyBtn" class="theme-btn" onclick="notifyUpdate()" style="background-color: var(--warning);">📢 Push Update Notification</button>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">This will change the "Last Updated" date on the public search page to today's date.</p>
+            <button id="notifyBtn" class="theme-btn" onclick="notifyUpdate()" style="background-color: var(--warning);">📢 Auto-Push Today's Date</button>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px; margin-bottom: 20px;">This will change the "Last Updated" date on the public search page to today's date.</p>
+            
+            <div style="background: var(--card-bg); border: 1px dashed var(--border); padding: 15px; border-radius: 8px; max-width: 400px;">
+                <label style="margin-top: 0; font-size: 13px;">Manual Date Override</label>
+                <div style="display: flex; gap: 10px; margin-top: 8px;">
+                    <input type="text" id="manualDateInput" placeholder="e.g., 3/20/26" style="margin: 0; flex: 1;">
+                    <button onclick="setManualDate()" class="primary-btn" style="margin: 0;">Set Date</button>
+                </div>
+                <p id="manualDateStatus" style="font-size: 12px; margin-top: 8px; font-weight: bold; display: none;"></p>
+            </div>
         
         <header>
             <h1 id="formTitle">Add New Medication</h1>
