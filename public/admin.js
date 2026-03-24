@@ -1,5 +1,5 @@
 // --- CONFIGURATION & INITIALIZATION ---
-console.log("PACPal Engine Started!");
+console.log("PACPal Admin Engine Started!");
 
 const firebaseConfig = {
     apiKey: "AIzaSyA5uz0RFyrCkxJocq8kZwFg_pcO2P6WTUg",
@@ -14,24 +14,21 @@ const firebaseConfig = {
 const themeToggle = document.getElementById('themeToggle');
 const body = document.body;
 
-// 1. Apply saved theme immediately on page load
 if (localStorage.getItem('pacpal_theme') === 'dark') {
     body.classList.add('dark-theme');
     if (themeToggle) themeToggle.innerText = '☀️ Light Mode';
 }
 
-// 2. Listen for clicks
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
         body.classList.toggle('dark-theme');
         const isDark = body.classList.contains('dark-theme');
-        
-        // 3. Save preference & update button text
         localStorage.setItem('pacpal_theme', isDark ? 'dark' : 'light');
         themeToggle.innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
     });
 }
 
+// --- FIREBASE SETUP ---
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
@@ -57,11 +54,15 @@ auth.onAuthStateChanged(user => {
 async function login() {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPassword').value;
+    const btn = document.querySelector('#loginSection button');
+    
+    btn.innerText = "Authenticating...";
     try {
         await auth.signInWithEmailAndPassword(email, pass);
     } catch (error) {
         document.getElementById('loginError').innerText = "Incorrect email or password.";
         document.getElementById('loginError').style.display = 'block';
+        btn.innerText = "Login to PACPal";
     }
 }
 
@@ -86,7 +87,7 @@ async function displayAdmins() {
     }
 }
 
-// --- MEDICATION LOGIC ---
+// --- MEDICATION ROLODEX LOGIC ---
 function buildAlphabet() {
     const container = document.getElementById('alphabetContainer');
     container.innerHTML = '';
@@ -101,27 +102,42 @@ function buildAlphabet() {
 
 async function fetchByLetter(letter) {
     currentLetter = letter;
-    buildAlphabet();
+    buildAlphabet(); // Updates active button color
+    
     const list = document.getElementById('databaseList');
-    list.innerHTML = "<li>Loading...</li>";
+    // Visual feedback so you know the refresh is actually happening
+    list.innerHTML = "<div style='padding: 20px; text-align: center;'>↻ Fetching secure database...</div>"; 
+    document.getElementById('emptyState').style.display = 'none';
+
     try {
         const snapshot = await db.collection('medications')
             .where('name', '>=', letter)
             .where('name', '<=', letter + '\uf8ff')
             .orderBy('name').get();
+            
         currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderList();
-    } catch (e) { list.innerHTML = "<li class='error'>Error fetching data.</li>"; }
+    } catch (e) { 
+        console.error(e);
+        list.innerHTML = "<li class='error'>Error fetching data from Firestore.</li>"; 
+    }
 }
 
 function renderList() {
     const list = document.getElementById('databaseList');
-    document.getElementById('emptyState').style.display = currentResults.length ? 'none' : 'block';
+    
+    if (currentResults.length === 0) {
+        list.innerHTML = "";
+        document.getElementById('emptyState').style.display = 'block';
+        return;
+    }
+    
+    document.getElementById('emptyState').style.display = 'none';
     list.innerHTML = currentResults.map(med => `
         <li class="med-item">
             <div class="med-info">
                 <strong>${med.name}</strong>
-                <span class="category-badge">${med.category}</span>
+                <span class="category-badge">${med.category || 'General'}</span>
             </div>
             <div class="med-actions">
                 <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
@@ -131,12 +147,14 @@ function renderList() {
 }
 
 // --- SAVE / UPDATE LOGIC ---
-// Replace your existing 'submit' event listener with this:
+// This handles BOTH adding new meds and updating existing ones
 document.getElementById('addMedForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const rawName = document.getElementById('medName').value.trim();
+    // Capitalize first letter so the Rolodex filter works accurately
     const sanitizedName = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+    const targetLetter = sanitizedName.charAt(0).toUpperCase();
 
     const medData = {
         name: sanitizedName, 
@@ -145,40 +163,47 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
     };
 
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.innerText = "Saving to Database..."; // Visual feedback
+    submitBtn.innerText = "Syncing with Cloud..."; 
     submitBtn.disabled = true;
 
     try {
         if (editingId) {
-            // UPDATE EXISTING
+            // Update an existing record
             await db.collection('medications').doc(editingId).update(medData);
-            await fetchByLetter(sanitizedName.charAt(0)); // Wait for fresh data
-            cancelEdit(); // Reset form AFTER the list updates
         } else {
-            // ADD NEW
+            // Create a brand new record
             await db.collection('medications').add(medData);
-            await fetchByLetter(sanitizedName.charAt(0)); // Wait for fresh data
-            document.getElementById('addMedForm').reset();
         }
+        
+        // Force the rolodex to jump to the letter of the med you just saved/edited
+        await fetchByLetter(targetLetter);
+        
+        // Clear the form back to default state
+        cancelEdit(); 
+        
     } catch (error) {
         console.error("Save Error:", error);
-        alert("Error saving to database.");
+        alert("System Error: Could not save to database.");
     } finally {
-        // Return button to normal state
-        submitBtn.innerText = editingId ? "Update Database" : "Save to Database";
         submitBtn.disabled = false;
+        // Ensure button text returns to normal if cancelEdit didn't catch it
+        if (!editingId) submitBtn.innerText = "Save to Database";
     }
 });
 
 function startEdit(id) {
     const med = currentResults.find(m => m.id === id);
+    if (!med) return;
+    
     document.getElementById('medName').value = med.name;
     document.getElementById('medCategory').value = med.category;
     document.getElementById('medInstructions').value = med.instructions;
     editingId = id;
-    document.getElementById('formTitle').innerText = "Edit: " + med.name;
+    
+    document.getElementById('formTitle').innerText = "Editing: " + med.name;
     document.getElementById('submitBtn').innerText = "Update Database";
-    document.getElementById('cancelBtn').style.display = "block";
+    // Using inline-block so it sits nicely next to the save button
+    document.getElementById('cancelBtn').style.display = "inline-block"; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -194,9 +219,10 @@ async function deleteMed(id, medName) {
     if (confirm(`⚠️ WARNING: Are you sure you want to permanently delete "${medName}"?`)) {
         try {
             await db.collection('medications').doc(id).delete();
-            fetchByLetter(currentLetter);
+            await fetchByLetter(currentLetter); // Refresh list immediately
         } catch (error) {
-            alert("Error: Could not delete.");
+            console.error(error);
+            alert("Error: Could not delete record.");
         }
     }
 }
