@@ -9,11 +9,10 @@ const firebaseConfig = {
     measurementId: "G-QMLLEV67R5"
 };
 
-// --- 1. DARK MODE (Top Priority - Unified with Admin) ---
+// --- 1. DARK MODE ---
 const body = document.body;
-const themeBtn = document.getElementById('themeToggle'); // Matches your HTML ID
+const themeBtn = document.getElementById('themeToggle'); 
 
-// Apply saved preference immediately
 if (localStorage.getItem('pacpal_theme') === 'dark') {
     body.classList.add('dark-theme');
     if (themeBtn) themeBtn.innerText = '☀️ Light Mode';
@@ -33,6 +32,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 let myDatabase = [];
 let fuse = null;
+
+// Global array to safely hold search results
+window.currentSearchResults = []; 
 
 const searchInput = document.getElementById('medSearch');
 const searchResults = document.getElementById('searchResults');
@@ -77,18 +79,20 @@ if (searchInput) {
         }
 
         const results = fuse.search(query);
+        
         if (searchResults) {
             if (results.length > 0) {
-                searchResults.innerHTML = results.map(res => {
-                    const item = res.item;
-                    // Encode data to handle special characters in instructions
-                    const safeData = btoa(JSON.stringify(item));
+                // Save the actual objects into our safe global array
+                window.currentSearchResults = results.map(res => res.item);
+                
+                // Build HTML using just the index number (0, 1, 2...)
+                searchResults.innerHTML = window.currentSearchResults.map((item, index) => {
                     return `
                         <div class="card search-result-card">
                             <h3 class="med-name">${item.name}</h3>
                             <span class="category-badge">${item.category || 'General'}</span>
                             <p class="instruction-text">${(item.instructions || '').substring(0, 80)}...</p>
-                            <button class="add-btn" onclick="addToList('${safeData}')">Add to List +</button>
+                            <button class="add-btn" onclick="addToList(${index})">Add to List +</button>
                         </div>
                     `;
                 }).join('');
@@ -99,11 +103,12 @@ if (searchInput) {
     });
 }
 
-// --- 4. LIST LOGIC (Global scope for button access) ---
-window.addToList = function(encodedData) {
+// --- 4. LIST LOGIC ---
+window.addToList = function(index) {
     try {
-        const item = JSON.parse(atob(encodedData));
-        if (!medicationList) return;
+        // Grab the item directly from the array using the index
+        const item = window.currentSearchResults[index];
+        if (!item || !medicationList) return;
 
         const card = document.createElement('div');
         card.className = 'card pinned-card';
@@ -115,7 +120,6 @@ window.addToList = function(encodedData) {
         `;
         medicationList.appendChild(card);
         
-        // Clear search UI
         if (searchInput) searchInput.value = '';
         if (searchResults) searchResults.innerHTML = '';
         
@@ -131,7 +135,5 @@ function updateUI() {
     if (listHeader) listHeader.style.display = hasItems ? 'block' : 'none';
 }
 
-// Start the app
 init();
-// Initial UI check to hide buttons/headers
 updateUI();
