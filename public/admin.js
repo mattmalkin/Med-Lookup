@@ -291,3 +291,38 @@ async function notifyUpdate() {
         btn.disabled = false;
     }
 }
+
+// --- MANUAL DATE OVERRIDE ---
+async function setManualDate() {
+    const dateInput = document.getElementById('manualDateInput').value.trim();
+    const statusMsg = document.getElementById('manualDateStatus');
+
+    if (!dateInput) {
+        alert("Please enter a date first.");
+        return;
+    }
+
+    try {
+        // Save the manually typed date to Firestore
+        await db.collection('system').doc('metadata').set({
+            lastUpdated: dateInput
+        }, { merge: true });
+
+        // Show a temporary success message
+        statusMsg.innerText = `✓ Public date set to: ${dateInput}`;
+        statusMsg.style.color = "var(--success)";
+        statusMsg.style.display = "block";
+        document.getElementById('manualDateInput').value = ''; // clear the box
+
+        // Hide the message after 4 seconds
+        setTimeout(() => {
+            statusMsg.style.display = "none";
+        }, 4000);
+
+    } catch (error) {
+        console.error("Manual Date Error:", error);
+        statusMsg.innerText = "✖ Error saving manual date.";
+        statusMsg.style.color = "var(--danger)";
+        statusMsg.style.display = "block";
+    }
+}
