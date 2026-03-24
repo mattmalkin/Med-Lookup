@@ -148,12 +148,13 @@ function renderList() {
 
 // --- SAVE / UPDATE LOGIC ---
 // This handles BOTH adding new meds and updating existing ones
+// --- SAVE / UPDATE LOGIC ---
 document.getElementById('addMedForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
     const rawName = document.getElementById('medName').value.trim();
-    // Capitalize first letter so the Rolodex filter works accurately
-    const sanitizedName = rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+    // Capitalize the first letter, but DO NOT force lowercase on the rest (Preserves acronyms like HCTZ)
+    const sanitizedName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     const targetLetter = sanitizedName.charAt(0).toUpperCase();
 
     const medData = {
@@ -163,20 +164,35 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
     };
 
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.innerText = "Syncing with Cloud..."; 
+    submitBtn.innerText = "Syncing..."; 
     submitBtn.disabled = true;
 
     try {
         if (editingId) {
-            // Update an existing record
+            // 1. Send update to Firebase
             await db.collection('medications').doc(editingId).update(medData);
+            
+            // 2. Optimistic UI: Force the local array to update instantly (Bypasses cache lag)
+            const index = currentResults.findIndex(m => m.id === editingId);
+            if (index !== -1) {
+                currentResults[index] = { id: editingId, ...medData };
+            }
+
+            // 3. Re-sort the array alphabetically just in case the name change altered the order
+            currentResults.sort((a, b) => a.name.localeCompare(b.name));
+
         } else {
             // Create a brand new record
             await db.collection('medications').add(medData);
         }
         
-        // Force the rolodex to jump to the letter of the med you just saved/edited
-        await fetchByLetter(targetLetter);
+        // If they changed the first letter (e.g. Aspirin -> Bayer) or added a new med, fetch the new letter
+        if (targetLetter !== currentLetter || !editingId) {
+            await fetchByLetter(targetLetter);
+        } else {
+            // If staying on the same letter, immediately re-render our instantly updated array
+            renderList();
+        }
         
         // Clear the form back to default state
         cancelEdit(); 
@@ -186,7 +202,7 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
         alert("System Error: Could not save to database.");
     } finally {
         submitBtn.disabled = false;
-        // Ensure button text returns to normal if cancelEdit didn't catch it
+        // Ensure button text returns to normal
         if (!editingId) submitBtn.innerText = "Save to Database";
     }
 });
