@@ -1,4 +1,4 @@
-// 1. YOUR FIREBASE CONNECTION KEYS
+// 1. FIREBASE CONFIGURATION
 const firebaseConfig = {
     apiKey: "AIzaSyA5uz0RFyrCkxJocq8kZwFg_pcO2P6WTUg",
     authDomain: "pacpal-9f9bf.firebaseapp.com",
@@ -9,58 +9,68 @@ const firebaseConfig = {
     measurementId: "G-QMLLEV67R5"
 };
 
-// --- 1. DARK MODE (Top Priority) ---
+// --- 1. DARK MODE (Top Priority - Unified with Admin) ---
 const body = document.body;
-const themeBtn = document.getElementById('theme-toggle');
+const themeBtn = document.getElementById('themeToggle'); // Matches your HTML ID
 
-if (localStorage.getItem('theme') === 'dark') { body.classList.add('dark-theme'); }
+// Apply saved preference immediately
+if (localStorage.getItem('pacpal_theme') === 'dark') {
+    body.classList.add('dark-theme');
+    if (themeBtn) themeBtn.innerText = '☀️ Light Mode';
+}
 
 if (themeBtn) {
     themeBtn.onclick = () => {
         body.classList.toggle('dark-theme');
-        localStorage.setItem('theme', body.classList.contains('dark-theme') ? 'dark' : 'light');
+        const isDark = body.classList.contains('dark-theme');
+        localStorage.setItem('pacpal_theme', isDark ? 'dark' : 'light');
+        themeBtn.innerText = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
     };
 }
 
 // --- 2. FIREBASE & SEARCH INIT ---
-firebase.initializeApp(firebaseConfig); // Use your existing config object
+firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 let myDatabase = [];
 let fuse = null;
 
+const searchInput = document.getElementById('medSearch');
+const searchResults = document.getElementById('searchResults');
+const medicationList = document.getElementById('medicationList');
+const printBtn = document.getElementById('printBtn');
+const listHeader = document.getElementById('listHeader');
+
 async function init() {
     try {
-        // Safety check for status element
         const statusEl = document.getElementById('status');
-        if (statusEl) statusEl.innerHTML = "↻ Connecting...";
+        if (statusEl) statusEl.innerHTML = "↻ Connecting to Database...";
 
         const snapshot = await db.collection('medications').get();
         myDatabase = snapshot.docs.map(doc => doc.data());
         
-        // Initialize Fuse
-        fuse = new Fuse(myDatabase, { keys: ["name", "category"], threshold: 0.3 });
+        fuse = new Fuse(myDatabase, { 
+            keys: ["name", "category"], 
+            threshold: 0.3 
+        });
 
         if (statusEl) statusEl.innerHTML = "✓ Database Online";
         
-        const searchInput = document.getElementById('medSearch');
         if (searchInput) {
             searchInput.disabled = false;
             searchInput.placeholder = "Search (e.g., Lisinopril)...";
         }
     } catch (error) {
         console.error("Init Error:", error);
-        if (document.getElementById('status')) document.getElementById('status').innerHTML = "✖ Error.";
+        if (document.getElementById('status')) {
+            document.getElementById('status').innerHTML = "✖ Error connecting to database.";
+        }
     }
 }
 
-// --- 3. SEARCH LOGIC (With Null Checks) ---
-const searchInput = document.getElementById('medSearch');
-const searchResults = document.getElementById('searchResults');
-
+// --- 3. SEARCH LOGIC ---
 if (searchInput) {
     searchInput.addEventListener('input', () => {
         const query = searchInput.value;
-        // Check if fuse is actually ready yet
         if (!fuse || query.length < 2) { 
             if (searchResults) searchResults.innerHTML = ''; 
             return; 
@@ -71,12 +81,14 @@ if (searchInput) {
             if (results.length > 0) {
                 searchResults.innerHTML = results.map(res => {
                     const item = res.item;
+                    // Encode data to handle special characters in instructions
+                    const safeData = btoa(JSON.stringify(item));
                     return `
                         <div class="card search-result-card">
-                            <h3>${item.name}</h3>
+                            <h3 class="med-name">${item.name}</h3>
                             <span class="category-badge">${item.category || 'General'}</span>
-                            <p>${(item.instructions || '').substring(0, 80)}...</p>
-                            <button class="add-btn" onclick="addToList('${btoa(JSON.stringify(item))}')">Add to List +</button>
+                            <p class="instruction-text">${(item.instructions || '').substring(0, 80)}...</p>
+                            <button class="add-btn" onclick="addToList('${safeData}')">Add to List +</button>
                         </div>
                     `;
                 }).join('');
@@ -87,33 +99,39 @@ if (searchInput) {
     });
 }
 
-// --- 4. LIST LOGIC ---
+// --- 4. LIST LOGIC (Global scope for button access) ---
 window.addToList = function(encodedData) {
-    const item = JSON.parse(atob(encodedData));
-    const medicationList = document.getElementById('medicationList');
-    if (!medicationList) return;
+    try {
+        const item = JSON.parse(atob(encodedData));
+        if (!medicationList) return;
 
-    const card = document.createElement('div');
-    card.className = 'card pinned-card';
-    card.innerHTML = `
-        <button class="remove-btn" onclick="this.parentElement.remove(); updateUI();">×</button>
-        <h3>${item.name}</h3>
-        <span class="category-badge">${item.category || 'General'}</span>
-        <p>${item.instructions || 'No instructions.'}</p>
-    `;
-    medicationList.appendChild(card);
-    
-    if (searchInput) searchInput.value = '';
-    if (searchResults) searchResults.innerHTML = '';
-    updateUI();
+        const card = document.createElement('div');
+        card.className = 'card pinned-card';
+        card.innerHTML = `
+            <button class="remove-btn" onclick="this.parentElement.remove(); updateUI();">×</button>
+            <h3 class="med-name">${item.name}</h3>
+            <span class="category-badge">${item.category || 'General'}</span>
+            <p class="instruction-text">${item.instructions || 'No instructions.'}</p>
+        `;
+        medicationList.appendChild(card);
+        
+        // Clear search UI
+        if (searchInput) searchInput.value = '';
+        if (searchResults) searchResults.innerHTML = '';
+        
+        updateUI();
+    } catch (e) {
+        console.error("Error adding to list:", e);
+    }
 };
 
 function updateUI() {
-    const printBtn = document.getElementById('printBtn');
-    const medicationList = document.getElementById('medicationList');
-    if (printBtn && medicationList) {
-        printBtn.style.display = medicationList.children.length > 0 ? 'block' : 'none';
-    }
+    const hasItems = medicationList && medicationList.children.length > 0;
+    if (printBtn) printBtn.style.display = hasItems ? 'block' : 'none';
+    if (listHeader) listHeader.style.display = hasItems ? 'block' : 'none';
 }
 
+// Start the app
 init();
+// Initial UI check to hide buttons/headers
+updateUI();
