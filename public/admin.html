@@ -13,23 +13,7 @@
         <button class="theme-btn" id="themeToggle">🌙 Dark Mode</button>
         <button class="logout-btn" onclick="logout()">Log Out</button>
     </div>
-
-            <h2>Authorized Admins</h2>
-            <ul id="admin-list" class="admin-list"></ul>
-            <hr>
-            <h2>System Controls</h2>
-            <button id="notifyBtn" class="theme-btn" onclick="notifyUpdate()" style="background-color: var(--warning);">📢 Auto-Push Today's Date</button>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px; margin-bottom: 20px;">This will change the "Last Updated" date on the public search page to today's date.</p>
-            
-            <div style="background: var(--card-bg); border: 1px dashed var(--border); padding: 15px; border-radius: 8px; max-width: 400px;">
-                <label style="margin-top: 0; font-size: 13px;">Manual Date Override</label>
-                <div style="display: flex; gap: 10px; margin-top: 8px;">
-                    <input type="text" id="manualDateInput" placeholder="e.g., 3/20/26" style="margin: 0; flex: 1;">
-                    <button onclick="setManualDate()" class="primary-btn" style="margin: 0;">Set Date</button>
-                </div>
-                <p id="manualDateStatus" style="font-size: 12px; margin-top: 8px; font-weight: bold; display: none;"></p>
-            </div>
-        
+    
         <header>
             <h1 id="formTitle">Add New Medication</h1>
         </header>
@@ -43,30 +27,53 @@
             </div>
         </section>
 
-        <section id="dataFormSection">
-            <form id="addMedForm" class="card">
-                <label>Medication Name</label>
-                <input type="text" id="medName" required placeholder="e.g. Lisinopril">
+<section id="dataFormSection" style="display: none;">
+        
+        <h2>System Controls</h2>
+        <div class="card">
+            <button id="notifyBtn" class="theme-btn" onclick="notifyUpdate()" style="background-color: var(--warning); margin-bottom: 15px;">📢 Auto-Push Today's Date</button>
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">This changes the "Last Updated" date on the public search page to today.</p>
 
-                <label>Category</label>
-                <input type="text" id="medCategory" required placeholder="e.g. ACE Inhibitor">
+            <label style="margin-top: 0; font-size: 13px;">Manual Date Override</label>
+            <div style="display: flex; gap: 10px; margin-top: 8px;">
+                <input type="text" id="manualDateInput" placeholder="e.g., 3/20/26" style="margin: 0; flex: 1;">
+                <button onclick="setManualDate()" class="primary-btn" style="margin: 0;">Set Date</button>
+            </div>
+            <p id="manualDateStatus" style="font-size: 12px; margin-top: 8px; font-weight: bold; display: none;"></p>
+        </div>
 
-                <label>Clinical Instructions</label>
-                <textarea id="medInstructions" required placeholder="Dosage, timing, and safety warnings..."></textarea>
+        <hr>
 
-                <div class="btn-group">
-                    <button type="submit" id="submitBtn" class="add-btn">Save to Database</button>
-                    <button type="button" id="cancelBtn" onclick="cancelEdit()" class="cancel-btn" style="display:none;">Cancel Edit</button>
-                </div>
-            </form>
+        <h2>Authorized Admins</h2>
+        <ul id="admin-list" class="admin-list"></ul>
 
-            <hr>
+        <hr>
 
-            <h2>Current Medications</h2>
-            <div id="alphabetContainer" class="alphabet-container"></div>
-            <ul id="databaseList" class="med-list"></ul>
-            <p id="emptyState" style="display:none;">No medications found for this letter.</p>
-        </section>
+        <h2>Add / Edit Medication</h2>
+        <form id="addMedForm" class="card">
+            <label>Medication Name</label>
+            <input type="text" id="medName" required placeholder="e.g. Lisinopril">
+
+            <label>Category</label>
+            <input type="text" id="medCategory" required placeholder="e.g. ACE Inhibitor">
+
+            <label>Clinical Instructions</label>
+            <textarea id="medInstructions" required placeholder="Dosage, timing, and safety warnings..."></textarea>
+
+            <div class="btn-group">
+                <button type="submit" id="submitBtn" class="add-btn">Save to Database</button>
+                <button type="button" id="cancelBtn" onclick="cancelEdit()" class="cancel-btn" style="display:none;">Cancel Edit</button>
+            </div>
+        </form>
+
+        <hr>
+
+        <h2>Current Medications</h2>
+        <div id="alphabetContainer" class="alphabet-container"></div>
+        <ul id="databaseList" class="med-list"></ul>
+        <p id="emptyState" style="display:none;">No medications found for this letter.</p>
+
+    </section>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
