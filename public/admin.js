@@ -105,17 +105,39 @@ async function fetchByLetter(letter) {
     buildAlphabet(); // Updates active button color
     
     const list = document.getElementById('databaseList');
-    // Visual feedback so you know the refresh is actually happening
-    list.innerHTML = "<div style='padding: 20px; text-align: center;'>↻ Fetching secure database...</div>"; 
     document.getElementById('emptyState').style.display = 'none';
 
+    const now = Date.now();
+    const CACHE_LIFETIME_MS = 12 * 60 * 60 * 1000; // 12 hours
+    const cacheKey = `pacpal_admin_meds_${letter}`; // Unique cache for each letter
+    
+    const cachedMeds = localStorage.getItem(cacheKey);
+    const cachedTime = localStorage.getItem('pacpal_admin_cache_time');
+
+    // CACHE CHECK
+    if (cachedMeds && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_LIFETIME_MS)) {
+        console.log(`⚡ Admin loaded letter ${letter} from local cache.`);
+        currentResults = JSON.parse(cachedMeds);
+        renderList();
+        return; // Stop here! Don't run the Firebase code below.
+    }
+
+    // CACHE MISS: Fetch from Firebase
+    list.innerHTML = "<div style='padding: 20px; text-align: center;'>↻ Fetching secure database...</div>"; 
+
     try {
+        console.log(`☁️ Admin downloading letter ${letter} from Firebase...`);
         const snapshot = await db.collection('medications')
             .where('name', '>=', letter)
             .where('name', '<=', letter + '\uf8ff')
             .orderBy('name').get();
             
         currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Save the fresh results and the timestamp to memory
+        localStorage.setItem(cacheKey, JSON.stringify(currentResults));
+        localStorage.setItem('pacpal_admin_cache_time', now.toString());
+        
         renderList();
     } catch (e) { 
         console.error(e);
@@ -153,7 +175,6 @@ function renderList() {
 
 // --- SAVE / UPDATE LOGIC ---
 // This handles BOTH adding new meds and updating existing ones
-// --- SAVE / UPDATE LOGIC ---
 document.getElementById('addMedForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -190,6 +211,8 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
             // Create a brand new record
             await db.collection('medications').add(medData);
         }
+        // This instantly destroys the admin cache timer so the next click forces a fresh download
+        localStorage.removeItem('pacpal_admin_cache_time');
         
         // If they changed the first letter (e.g. Aspirin -> Bayer) or added a new med, fetch the new letter
         if (targetLetter !== currentLetter || !editingId) {
@@ -240,6 +263,8 @@ async function deleteMed(id, medName) {
     if (confirm(`⚠️ WARNING: Are you sure you want to permanently delete "${medName}"?`)) {
         try {
             await db.collection('medications').doc(id).delete();
+            // Destroy the cache timer so the deleted item vanishes from the list immediately
+            localStorage.removeItem('pacpal_admin_cache_time');
             await fetchByLetter(currentLetter); // Refresh list immediately
         } catch (error) {
             console.error(error);
