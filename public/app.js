@@ -42,42 +42,7 @@ const medicationList = document.getElementById('medicationList');
 const printBtn = document.getElementById('printBtn');
 const listHeader = document.getElementById('listHeader');
 
-async function init() {
-    try {
-        const statusEl = document.getElementById('status');
-        if (statusEl) statusEl.innerHTML = "↻ Connecting to Database...";
 
-        // 1. Fetch Medications
-        const snapshot = await db.collection('medications').get();
-        myDatabase = snapshot.docs.map(doc => doc.data());
-        
-        fuse = new Fuse(myDatabase, { 
-            keys: ["name", "category"], 
-            threshold: 0.3 
-        });
-
-        // 2. Fetch the Last Updated Date from Admin
-        const metaDoc = await db.collection('system').doc('metadata').get();
-        if (metaDoc.exists && metaDoc.data().lastUpdated) {
-            const dateDisplay = document.getElementById('updateDateDisplay');
-            if (dateDisplay) {
-                dateDisplay.innerHTML = `<strong>Database Update ${metaDoc.data().lastUpdated}</strong>`;
-            }
-        }
-
-        if (statusEl) statusEl.innerHTML = "✓ Database Online";
-        
-        if (searchInput) {
-            searchInput.disabled = false;
-            searchInput.placeholder = "Search (e.g., Lisinopril)...";
-        }
-    } catch (error) {
-        console.error("Init Error:", error);
-        if (document.getElementById('status')) {
-            document.getElementById('status').innerHTML = "✖ Error connecting to database.";
-        }
-    }
-}
 
 // --- 4. SEARCH LOGIC ---
 if (searchInput) {
