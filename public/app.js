@@ -47,23 +47,63 @@ async function init() {
         const statusEl = document.getElementById('status');
         if (statusEl) statusEl.innerHTML = "↻ Connecting to Database...";
 
-        // 1. Fetch Medications
-        const snapshot = await db.collection('medications').get();
-        myDatabase = snapshot.docs.map(doc => doc.data());
+        // 1. PING: Fetch the metadata first (Cost: 1 Read)
+        const metaDoc = await db.collection('system').doc('metadata').get();
+        const serverDate = metaDoc.exists ? metaDoc.data().lastUpdated : null;
         
+        if (serverDate) {
+            const dateDisplay = document.getElementById('updateDateDisplay');
+            if (dateDisplay) {
+                dateDisplay.innerHTML = `<strong>Database Update ${serverDate}</strong>`;
+            }
+        }
+
+        // --- NEW: Time-Based Expiration Logic ---
+        const CACHE_LIFETIME_HOURS = 12; // Change this to force a refresh sooner or later
+        const CACHE_LIFETIME_MS = CACHE_LIFETIME_HOURS * 60 * 60 * 1000;
+        const now = Date.now();
+
+        // 2. CACHE CHECK: Look inside the browser's memory
+        const cachedMeds = localStorage.getItem('pacpal_meds');
+        const cachedDate = localStorage.getItem('pacpal_date');
+        const cachedTime = localStorage.getItem('pacpal_cache_time');
+
+        let useCache = false;
+
+        if (cachedMeds && cachedDate === serverDate && cachedTime) {
+            const timeSinceLastDownload = now - parseInt(cachedTime, 10);
+            
+            if (timeSinceLastDownload < CACHE_LIFETIME_MS) {
+                useCache = true; // The cache is fresh enough, use it!
+            } else {
+                console.log("⏱️ Cache expired! Forcing a fresh download.");
+            }
+        }
+
+        if (useCache) {
+            // CACHE HIT! Load from memory (Cost: 0 Reads)
+            console.log("⚡ Loaded database from local cache.");
+            myDatabase = JSON.parse(cachedMeds);
+        } else {
+            // CACHE MISS! The database is new, updated, OR the timer expired.
+            console.log("☁️ Downloading fresh database from Firebase...");
+            const snapshot = await db.collection('medications').get();
+            myDatabase = snapshot.docs.map(doc => doc.data());
+            
+            // Save this fresh data AND the exact timestamp into memory for next time
+            localStorage.setItem('pacpal_meds', JSON.stringify(myDatabase));
+            localStorage.setItem('pacpal_cache_time', now.toString());
+            
+            if (serverDate) {
+                localStorage.setItem('pacpal_date', serverDate);
+            }
+        }
+
+        // 3. Initialize the Search Engine
         fuse = new Fuse(myDatabase, { 
             keys: ["name", "category"], 
             threshold: 0.3 
         });
-
-        // 2. Fetch the Last Updated Date from Admin
-        const metaDoc = await db.collection('system').doc('metadata').get();
-        if (metaDoc.exists && metaDoc.data().lastUpdated) {
-            const dateDisplay = document.getElementById('updateDateDisplay');
-            if (dateDisplay) {
-                dateDisplay.innerHTML = `<strong>Database Update ${metaDoc.data().lastUpdated}</strong>`;
-            }
-        }
 
         if (statusEl) statusEl.innerHTML = "✓ Database Online";
         
