@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PACPal - Recent Updates</title>
+    <!-- Assuming you have a style.css, this will keep your colors matching! -->
+    <link rel="stylesheet" href="style.css"> 
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+        .log-card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        .log-date { color: #888; font-size: 0.9em; margin-bottom: 5px; }
+        .action-CREATE { color: #27ae60; font-weight: bold; }
+        .action-UPDATE { color: #f39c12; font-weight: bold; }
+        .action-DELETE { color: #c0392b; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">Recent Database Updates</h1>
+    <p style="text-align: center; color: #666;">A log of recent changes made to the PACPal medication database.</p>
+    <hr style="margin-bottom: 20px;">
+
+    <div id="updatesList">
+        <p><em>Loading recent updates...</em></p>
+    </div>
+
+    <script>
+        async function loadUpdates() {
+            const listEl = document.getElementById('updatesList');
+            
+            try {
+                // Fetch the zero-read JSON file directly from Storage
+                const updatesUrl = "https://firebasestorage.googleapis.com/v0/b/pacpal-9f9bf.firebasestorage.app/o/public%2Fupdates.json?alt=media";
+                const response = await fetch(updatesUrl);
+                
+                if (!response.ok) throw new Error("File not found or network error");
+                
+                const logs = await response.json();
+                
+                if (logs.length === 0) {
+                    listEl.innerHTML = "<p>No recent changes found.</p>";
+                    return;
+                }
+
+                // Build out a nice looking list of cards
+                listEl.innerHTML = logs.map(log => {
+                    let actionText = log.action;
+                    let icon = '📝';
+                    
+                    if (log.action === 'CREATE') { actionText = 'ADDED'; icon = '🟢'; }
+                    if (log.action === 'UPDATE') { actionText = 'UPDATED'; icon = '🟠'; }
+                    if (log.action === 'DELETE') { actionText = 'REMOVED'; icon = '🔴'; }
+
+                    return `
+                        <div class="log-card">
+                            <div class="log-date">${log.date}</div>
+                            <div>
+                                ${icon} <span class="action-${log.action}">${actionText}</span>: 
+                                <strong>${log.medicationName}</strong>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error("Error fetching updates:", error);
+                listEl.innerHTML = "<p><em>Waiting for the first database update to generate the log file. Make a change in the Admin portal to see it here!</em></p>";
+            }
+        }
+
+        // Run the function immediately when the page opens
+        loadUpdates();
+    </script>
+</body>
+</html>

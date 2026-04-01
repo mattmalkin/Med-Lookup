@@ -1,47 +1,73 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 
-// Initialize the admin environment (this gives it god-mode access to your database)
 admin.initializeApp();
 
-// Create a function that watches the 'medications' folder for ANY changes
 exports.generateMedsJSON = functions.firestore
     .document('medications/{medId}')
     .onWrite(async (change, context) => {
         const db = admin.firestore();
-        // Uses the default storage bucket linked to your project
         const bucket = admin.storage().bucket(); 
+        const medId = context.params.medId;
 
         try {
-            console.log("Database change detected! Generating new JSON file...");
+            console.log("Database change detected! Logging action...");
 
-            // 1. Fetch all 800+ medications and sort them alphabetically
+            // --- 1. THE AUDIT LOG LOGIC ---
+            let actionType = 'UPDATE';
+            let medName = 'Unknown';
+
+            // Figure out exactly what happened
+            if (!change.before.exists) {
+                actionType = 'CREATE';
+                medName = change.after.data().name || 'New Medication';
+            } else if (!change.after.exists) {
+                actionType = 'DELETE';
+                medName = change.before.data().name || 'Deleted Medication';
+            } else {
+                actionType = 'UPDATE';
+                medName = change.after.data().name || 'Updated Medication';
+            }
+
+            // Save the record to a new 'logs' collection
+            await db.collection('logs').add({
+                action: actionType,
+                medicationId: medId,
+                medicationName: medName,
+                timestamp: admin.firestore.FieldValue.serverTimestamp()
+            });
+            // ------------------------------
+
+            console.log("Generating new JSON file...");
+
+            // 2. Fetch all medications
             const snapshot = await db.collection('medications').orderBy('name').get();
             const medsArray = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
 
-            // 2. Convert that massive array into a single text string (JSON format)
+            // 3. Save to Cloud Storage
             const jsonString = JSON.stringify(medsArray);
-
-            // 3. Define where to save the file in your Firebase Cloud Storage
             const file = bucket.file('public/medications.json');
-
-            // 4. Save the file and set the content type so browsers know what it is
             await file.save(jsonString, {
                 metadata: {
                     contentType: 'application/json',
-                    // This tells the browser to cache this file for 12 hours (43200 seconds)
                     cacheControl: 'public, max-age=43200' 
                 }
             });
 
-            console.log(`Success! medications.json updated with ${medsArray.length} items.`);
+            // 4. Update the PING timestamp
+            const nowString = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
+            await db.collection('system').doc('metadata').set({
+                lastUpdated: nowString
+            }, { merge: true });
+
+            console.log(`Success! Log saved and JSON updated with ${medArray.length} items.`);
             return null;
             
         } catch (error) {
-            console.error("Critical Error generating JSON:", error);
+            console.error("Critical Error:", error);
             return null;
         }
     });
