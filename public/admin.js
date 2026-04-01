@@ -51,11 +51,11 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// FIX: Attached to 'window' so the HTML onclick can see it!
-window.login = async function() {
+// --- BULLETPROOF BUTTON LISTENERS ---
+document.getElementById('loginBtn').addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value;
     const pass = document.getElementById('loginPassword').value;
-    const btn = document.querySelector('#loginSection button');
+    const btn = document.getElementById('loginBtn');
     
     btn.innerText = "Authenticating...";
     try {
@@ -65,12 +65,15 @@ window.login = async function() {
         document.getElementById('loginError').style.display = 'block';
         btn.innerText = "Login to PACPal";
     }
-};
+});
 
-// FIX: Attached to 'window' as well
-window.logout = function() { 
-    auth.signOut(); 
-};
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    auth.signOut();
+});
+
+document.getElementById('cancelBtn').addEventListener('click', () => {
+    cancelEdit();
+});
 
 // --- ADMIN LIST ---
 async function displayAdmins() {
@@ -106,27 +109,25 @@ function buildAlphabet() {
 
 async function fetchByLetter(letter) {
     currentLetter = letter;
-    buildAlphabet(); // Updates active button color
+    buildAlphabet(); 
     
     const list = document.getElementById('databaseList');
     document.getElementById('emptyState').style.display = 'none';
 
     const now = Date.now();
-    const CACHE_LIFETIME_MS = 12 * 60 * 60 * 1000; // 12 hours
-    const cacheKey = `pacpal_admin_meds_${letter}`; // Unique cache for each letter
+    const CACHE_LIFETIME_MS = 12 * 60 * 60 * 1000; 
+    const cacheKey = `pacpal_admin_meds_${letter}`; 
     
     const cachedMeds = localStorage.getItem(cacheKey);
     const cachedTime = localStorage.getItem('pacpal_admin_cache_time');
 
-    // CACHE CHECK
     if (cachedMeds && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_LIFETIME_MS)) {
         console.log(`⚡ Admin loaded letter ${letter} from local cache.`);
         currentResults = JSON.parse(cachedMeds);
         renderList();
-        return; // Stop here! Don't run the Firebase code below.
+        return; 
     }
 
-    // CACHE MISS: Fetch from Firebase
     list.innerHTML = "<div style='padding: 20px; text-align: center;'>↻ Fetching secure database...</div>"; 
 
     try {
@@ -138,7 +139,6 @@ async function fetchByLetter(letter) {
             
         currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Save the fresh results and the timestamp to memory
         localStorage.setItem(cacheKey, JSON.stringify(currentResults));
         localStorage.setItem('pacpal_admin_cache_time', now.toString());
         
@@ -172,7 +172,7 @@ function renderList() {
             </div>
             <div class="med-actions">
                 <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
-                <button class="delete-btn" onclick="deleteMed('${med.id}', '${med.name}')">Delete</button>
+                <button class="delete-btn" onclick="deleteMed('${med.id}', '${med.name.replace(/'/g, "\\'")}')">Delete</button>
             </div>
         </li>`).join('');
 }
@@ -182,15 +182,12 @@ function refreshLetterCache(medicationName) {
     if (!medicationName) return;
     const targetLetter = medicationName.charAt(0).toUpperCase();
 
-    // Wipe specific letter from memory
     localStorage.removeItem(`pacpal_admin_meds_${targetLetter}`);
 
-    // If we changed the name so drastically it moved letters, wipe the old letter too
     if (currentLetter !== targetLetter) {
         localStorage.removeItem(`pacpal_admin_meds_${currentLetter}`);
     }
 
-    // Re-fetch the letter we just edited
     fetchByLetter(targetLetter);
 }
 
@@ -218,9 +215,7 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
             await db.collection('medications').add(medData);
         }
 
-        // Wipe the cache and instantly fetch the fresh data
         refreshLetterCache(medData.name);
-        
         cancelEdit(); 
         
     } catch (error) {
@@ -232,10 +227,41 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
     }
 });
 
+// --- RESTORED: MISSING FUNCTIONS FROM CUTOFF ---
 function startEdit(id) {
     const med = currentResults.find(m => m.id === id);
     if (!med) return;
     
     document.getElementById('medName').value = med.name;
     document.getElementById('medCategory').value = med.category;
-    document.getElementById('medInstructions').value = med
+    document.getElementById('medInstructions').value = med.instructions;
+    editingId = id;
+    
+    document.getElementById('formTitle').innerText = "Editing: " + med.name;
+    document.getElementById('submitBtn').innerText = "Update Database";
+    document.getElementById('cancelBtn').style.display = "inline-block"; 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelEdit() {
+    editingId = null;
+    document.getElementById('addMedForm').reset();
+    document.getElementById('formTitle').innerText = "Add New Medication";
+    document.getElementById('submitBtn').innerText = "Save to Database";
+    document.getElementById('cancelBtn').style.display = "none";
+}
+
+async function deleteMed(id, medName) {
+    if (confirm(`⚠️ WARNING: Are you sure you want to permanently delete "${medName}"?`)) {
+        try {
+            await db.collection('medications').doc(id).delete();
+            
+            // Wipe the cache and instantly fetch the fresh data
+            refreshLetterCache(medName);
+
+        } catch (error) {
+            console.error(error);
+            alert("Error: Could not delete record.");
+        }
+    }
+}
