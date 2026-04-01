@@ -26,51 +26,79 @@
     </div>
 
     <script>
-        async function loadUpdates() {
-            const listEl = document.getElementById('updatesList');
-            
-            try {
-                // Fetch the zero-read JSON file directly from Storage
-                const updatesUrl = "https://firebasestorage.googleapis.com/v0/b/pacpal-9f9bf.firebasestorage.app/o/public%2Fupdates.json?alt=media";
-                const response = await fetch(updatesUrl);
-                
-                if (!response.ok) throw new Error("File not found or network error");
-                
-                const logs = await response.json();
-                
-                if (logs.length === 0) {
-                    listEl.innerHTML = "<p>No recent changes found.</p>";
-                    return;
-                }
-
-                // Build out a nice looking list of cards
-                listEl.innerHTML = logs.map(log => {
-                    let actionText = log.action;
-                    let icon = '📝';
-                    
-                    if (log.action === 'CREATE') { actionText = 'ADDED'; icon = '🟢'; }
-                    if (log.action === 'UPDATE') { actionText = 'UPDATED'; icon = '🟠'; }
-                    if (log.action === 'DELETE') { actionText = 'REMOVED'; icon = '🔴'; }
-
-                    return `
-                        <div class="log-card">
-                            <div class="log-date">${log.date}</div>
-                            <div>
-                                ${icon} <span class="action-${log.action}">${actionText}</span>: 
-                                <strong>${log.medicationName}</strong>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-            } catch (error) {
-                console.error("Error fetching updates:", error);
-                listEl.innerHTML = "<p><em>Waiting for the first database update to generate the log file. Make a change in the Admin portal to see it here!</em></p>";
-            }
+async function loadUpdates() {
+    const listEl = document.getElementById('updatesList');
+    
+    try {
+        const updatesUrl = "https://firebasestorage.googleapis.com/v0/b/pacpal-9f9bf.firebasestorage.app/o/public%2Fupdates.json?alt=media";
+        const response = await fetch(updatesUrl);
+        
+        if (!response.ok) throw new Error("File not found");
+        
+        const logs = await response.json();
+        
+        if (logs.length === 0) {
+            listEl.innerHTML = "<p>No recent changes found.</p>";
+            return;
         }
 
-        // Run the function immediately when the page opens
-        loadUpdates();
+        // --- THE UPDATED MAPPING LOGIC ---
+        listEl.innerHTML = logs.map(log => {
+            // 1. Set the Icon and Label
+            let actionText = log.action;
+            let icon = '📝';
+            if (log.action === 'CREATE') { actionText = 'ADDED'; icon = '🟢'; }
+            if (log.action === 'UPDATE') { actionText = 'UPDATED'; icon = '🟠'; }
+            if (log.action === 'DELETE') { actionText = 'REMOVED'; icon = '🔴'; }
+
+            // 2. Build the detailed diff
+            let detailsHtml = '';
+            if (log.action === 'UPDATE' && log.updateDetails) {
+                // We split the " | " we created in the Cloud Function
+                const diffs = log.updateDetails.split(' | ');
+                
+                const diffLines = diffs.map(diff => {
+                    // Split the string at the arrow →
+                    const parts = diff.split(' → ');
+                    if (parts.length === 2) {
+                        return `
+                            <div style="margin-top: 5px; line-height: 1.4;">
+                                <span style="font-size: 0.75em; text-transform: uppercase; color: #999; display: block;">${parts[0]}</span>
+                                <span style="color: #c0392b; text-decoration: line-through; font-size: 0.85em;">${parts[0].includes(':') ? parts[0].split(': ')[1] : ''}</span> 
+                                <span style="color: #27ae60; font-size: 0.9em; font-weight: 500;"> → ${parts[1]}</span>
+                            </div>
+                        `;
+                    }
+                    return `<div>${diff}</div>`;
+                }).join('');
+
+                detailsHtml = `
+                    <div style="margin-left: 28px; padding: 10px; background: #f9f9f9; border-left: 3px solid #ddd; margin-top: 8px; border-radius: 4px;">
+                        ${diffLines}
+                    </div>
+                `;
+            }
+
+            // 3. Return the final HTML for this specific card
+            return `
+                <div class="log-card">
+                    <div class="log-date">${log.date}</div>
+                    <div>
+                        ${icon} <span class="action-${log.action}">${actionText}</span>: 
+                        <strong>${log.medicationName}</strong>
+                    </div>
+                    ${detailsHtml}
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Error fetching updates:", error);
+        listEl.innerHTML = "<p><em>Waiting for the first update. Make a change in Admin to see logs!</em></p>";
+    }
+}
+
+loadUpdates();
     </script>
 </body>
 </html>
