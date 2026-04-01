@@ -160,17 +160,18 @@ function renderList() {
     
     document.getElementById('emptyState').style.display = 'none';
     list.innerHTML = currentResults.map(med => `
-        <li class="med-item">
-            <div class="med-info" style="width: 70%;">
-                <strong>${med.name}</strong>
-                <span class="category-badge">${med.category || 'General'}</span>
+        <li class="med-item" style="align-items: flex-start; padding: 20px;">
+            <div class="med-info" style="flex: 1; padding-right: 20px;">
+                <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 1.1rem;">${med.name}</strong>
+                    <span class="category-badge" style="margin-left: 8px;">${med.category || 'General'}</span>
+                </div>
                 
-                <p style="font-size: 0.85em; color: var(--text-muted); margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin: 0; white-space: pre-wrap;">
                     ${med.instructions || 'No instructions provided.'}
                 </p>
-                
             </div>
-            <div class="med-actions">
+            <div class="med-actions" style="display: flex; gap: 10px; flex-shrink: 0;">
                 <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
                 <button class="delete-btn" onclick="deleteMed('${med.id}', '${med.name.replace(/'/g, "\\'")}')">Delete</button>
             </div>
