@@ -30,7 +30,21 @@
         <section id="dataFormSection" style="display: none;">
         
             <h2>Authorized Admins</h2>
-            <ul id="admin-list" class="admin-list"></ul>
+        <ul id="admin-list" class="admin-list"></ul>
+
+        <hr>
+
+        <h2>Weekly Briefing Mailing List</h2>
+        <div class="card">
+            <ul id="mailing-list-ui" class="admin-list" style="margin-bottom: 15px;"></ul>
+            
+            <div style="display: flex; gap: 10px;">
+                <input type="email" id="newEmailInput" placeholder="Add new email (e.g., pacrn@ucdavis.edu)" style="flex: 1; margin: 0;">
+                <button onclick="addMailingEmail()" class="add-btn" style="margin: 0; width: auto; padding: 0 20px;">Add Subscriber</button>
+            </div>
+        </div>
+
+        <hr>
 
             <hr>
 
