@@ -62,3 +62,29 @@
 
                 <div class="btn-group">
                     <button type="submit" id="submitBtn" class="add-btn">Add to Database</button>
+                    </div>
+            </form>
+
+            <hr>
+
+            <h2>Current Database</h2>
+            <div id="alphabetContainer" class="alphabet-container"></div>
+            
+            <button id="saveBatchBtn" onclick="saveAllChanges()" style="display: none; background-color: #dc3545; border: none; border-radius: 5px; color: white; padding: 10px 20px; font-weight: bold; margin-bottom: 15px; cursor: pointer; width: 100%;">
+                ⚠️ Save Pending Changes
+            </button>
+
+            <div id="medication-table" style="margin-top: 15px;"></div>
+
+            <p id="emptyState" style="display:none; margin-top: 20px;">No medications found for this letter.</p>
+
+        </section>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+    <script src="admin.js"></script>
+</body>
+</html>
