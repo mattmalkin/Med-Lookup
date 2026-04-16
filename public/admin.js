@@ -35,7 +35,10 @@ const auth = firebase.auth();
 
 let currentLetter = 'A';
 let currentResults = [];
-let editingId = null;
+
+// --- SPREADSHEET TRACKING VARIABLES ---
+let medTable; 
+let pendingEdits = {}; 
 
 // --- AUTHENTICATION ---
 auth.onAuthStateChanged(user => {
@@ -45,6 +48,7 @@ auth.onAuthStateChanged(user => {
         buildAlphabet(); 
         fetchByLetter('A');
         displayAdmins();
+        loadMailingList();
     } else {
         document.getElementById('loginSection').style.display = 'block';
         document.getElementById('dataFormSection').style.display = 'none';
@@ -71,9 +75,70 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
     auth.signOut();
 });
 
-document.getElementById('cancelBtn').addEventListener('click', () => {
-    cancelEdit();
-});
+// --- MAILING LIST MANAGEMENT ---
+async function loadMailingList() {
+    const listEl = document.getElementById('mailing-list-ui');
+    listEl.innerHTML = "<li>Loading subscribers...</li>";
+
+    try {
+        const doc = await db.collection('system').doc('mailingList').get();
+        const emails = doc.exists ? (doc.data().emails || []) : [];
+
+        if (emails.length === 0) {
+            listEl.innerHTML = "<li class='admin-item' style='color: #888;'>No subscribers yet.</li>";
+            return;
+        }
+
+        listEl.innerHTML = emails.map(email => `
+            <li class="admin-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>${email}</strong>
+                <button class="delete-btn" onclick="removeMailingEmail('${email}')" style="padding: 5px 10px; font-size: 0.8rem;">Remove</button>
+            </li>
+        `).join('');
+
+    } catch (error) {
+        console.error("Error loading mailing list:", error);
+        listEl.innerHTML = "<li class='error'>Error loading subscriber list.</li>";
+    }
+}
+
+async function addMailingEmail() {
+    const inputEl = document.getElementById('newEmailInput');
+    const newEmail = inputEl.value.trim().toLowerCase();
+
+    if (!newEmail || !newEmail.includes('@')) {
+        alert("Please enter a valid email address.");
+        return;
+    }
+
+    try {
+        await db.collection('system').doc('mailingList').set({
+            emails: firebase.firestore.FieldValue.arrayUnion(newEmail)
+        }, { merge: true });
+
+        inputEl.value = ""; 
+        loadMailingList();  
+
+    } catch (error) {
+        console.error("Error adding email:", error);
+        alert("Could not add email. Check console.");
+    }
+}
+
+async function removeMailingEmail(emailToRemove) {
+    if (!confirm(`Are you sure you want to remove ${emailToRemove} from the weekly briefing?`)) return;
+
+    try {
+        await db.collection('system').doc('mailingList').update({
+            emails: firebase.firestore.FieldValue.arrayRemove(emailToRemove)
+        });
+        loadMailingList(); 
+    } catch (error) {
+        console.error("Error removing email:", error);
+        alert("Could not remove email.");
+    }
+}
+
 
 // --- ADMIN LIST ---
 async function displayAdmins() {
@@ -111,11 +176,10 @@ async function fetchByLetter(letter) {
     currentLetter = letter;
     buildAlphabet(); 
     
-    const list = document.getElementById('databaseList');
     document.getElementById('emptyState').style.display = 'none';
 
     const now = Date.now();
-    const CACHE_LIFETIME_MS = 15 * 60 * 1000; // cache updatemin * sec * ms; 
+    const CACHE_LIFETIME_MS = 15 * 60 * 1000; 
     const cacheKey = `pacpal_admin_meds_${letter}`; 
     
     const cachedMeds = localStorage.getItem(cacheKey);
@@ -124,11 +188,9 @@ async function fetchByLetter(letter) {
     if (cachedMeds && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_LIFETIME_MS)) {
         console.log(`⚡ Admin loaded letter ${letter} from local cache.`);
         currentResults = JSON.parse(cachedMeds);
-        renderList();
+        renderSpreadsheet(currentResults); // Plugs directly into the spreadsheet
         return; 
     }
-
-    list.innerHTML = "<div style='padding: 20px; text-align: center;'>↻ Fetching secure database...</div>"; 
 
     try {
         console.log(`☁️ Admin downloading letter ${letter} from Firebase...`);
@@ -142,43 +204,112 @@ async function fetchByLetter(letter) {
         localStorage.setItem(cacheKey, JSON.stringify(currentResults));
         localStorage.setItem('pacpal_admin_cache_time', now.toString());
         
-        renderList();
+        renderSpreadsheet(currentResults); // Plugs directly into the spreadsheet
     } catch (e) { 
         console.error(e);
-        list.innerHTML = "<li class='error'>Error fetching data from Firestore.</li>"; 
+        alert("Error fetching data from Firestore.");
     }
 }
 
-function renderList() {
-    const list = document.getElementById('databaseList');
-    
-    if (currentResults.length === 0) {
-        list.innerHTML = "";
+// --- NEW SPREADSHEET RENDERER ---
+function renderSpreadsheet(medsArray) {
+    if (medsArray.length === 0) {
         document.getElementById('emptyState').style.display = 'block';
+        if (medTable) medTable.clearData();
         return;
     }
     
     document.getElementById('emptyState').style.display = 'none';
-    list.innerHTML = currentResults.map(med => `
-        <li class="med-item" style="align-items: flex-start; padding: 20px;">
-            <div class="med-info" style="flex: 1; padding-right: 20px;">
-                <div style="margin-bottom: 8px;">
-                    <strong style="font-size: 1.1rem;">${med.name}</strong>
-                    <span class="category-badge" style="margin-left: 8px;">${med.category || 'General'}</span>
-                </div>
-                
-                <p style="font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin: 0; white-space: pre-wrap;">
-                    ${med.instructions || 'No instructions provided.'}
-                </p>
-            </div>
-            <div class="med-actions" style="display: flex; gap: 10px; flex-shrink: 0;">
-                <button class="edit-btn" onclick="startEdit('${med.id}')">Edit</button>
-                <button class="delete-btn" onclick="deleteMed('${med.id}', '${med.name.replace(/'/g, "\\'")}')">Delete</button>
-            </div>
-        </li>`).join('');
+
+    if (medTable) {
+        medTable.replaceData(medsArray);
+        return;
+    }
+
+    medTable = new Tabulator("#medication-table", {
+        data: medsArray, 
+        layout: "fitColumns", 
+        responsiveLayout: "collapse",
+        
+        columns: [
+            { title: "Name", field: "name", editor: "input", width: 200 },
+            { title: "Category", field: "category", editor: "input", width: 150 },
+            { 
+                title: "Clinical Instructions", 
+                field: "instructions", 
+                editor: "textarea", 
+                formatter: "textarea", 
+                variableHeight: true 
+            },
+            // The Delete Button inside the spreadsheet
+            {
+                title: "Del", 
+                formatter: "buttonCross", 
+                width: 60, 
+                hozAlign: "center", 
+                headerSort: false,
+                cellClick: function(e, cell) {
+                    const rowData = cell.getRow().getData();
+                    deleteMed(rowData.id, rowData.name); 
+                }
+            }
+        ],
+    });
+
+    medTable.on("cellEdited", function(cell) {
+        const rowData = cell.getRow().getData(); 
+        const fieldName = cell.getField();       
+        const newValue = cell.getValue();        
+        const medId = rowData.id;
+
+        if (!pendingEdits[medId]) {
+            pendingEdits[medId] = {};
+        }
+        pendingEdits[medId][fieldName] = newValue;
+
+        document.getElementById('saveBatchBtn').style.display = 'block';
+    });
 }
 
-// --- NEW: CACHE CLEARING HELPER ---
+// --- BATCH SAVE LOGIC ---
+async function saveAllChanges() {
+    if (Object.keys(pendingEdits).length === 0) return;
+
+    const saveBtn = document.getElementById('saveBatchBtn');
+    saveBtn.innerText = "Saving to database...";
+    saveBtn.disabled = true;
+
+    try {
+        const batch = db.batch();
+
+        for (const [medId, changes] of Object.entries(pendingEdits)) {
+            const medRef = db.collection('medications').doc(medId);
+            batch.update(medRef, changes);
+        }
+
+        await batch.commit();
+
+        pendingEdits = {}; 
+        saveBtn.style.display = 'none'; 
+        saveBtn.innerText = "⚠️ Save Pending Changes"; 
+        saveBtn.disabled = false;
+
+        // Force a fresh pull of the current letter so the cache matches the database
+        localStorage.removeItem(`pacpal_admin_meds_${currentLetter}`);
+        fetchByLetter(currentLetter);
+        
+        alert("All changes saved successfully!");
+
+    } catch (error) {
+        console.error("Error saving batch:", error);
+        alert("There was an error saving your changes. Check the console.");
+        
+        saveBtn.innerText = "⚠️ Save Pending Changes";
+        saveBtn.disabled = false;
+    }
+}
+
+// --- CACHE CLEARING HELPER ---
 function refreshLetterCache(medicationName) {
     if (!medicationName) return;
     const targetLetter = medicationName.charAt(0).toUpperCase();
@@ -192,7 +323,7 @@ function refreshLetterCache(medicationName) {
     fetchByLetter(targetLetter);
 }
 
-// --- SAVE / UPDATE LOGIC ---
+// --- NEW MEDICATION ONLY (No more editing from this form) ---
 document.getElementById('addMedForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -206,52 +337,25 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
     };
 
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.innerText = "Syncing..."; 
+    submitBtn.innerText = "Adding..."; 
     submitBtn.disabled = true;
 
     try {
-        if (editingId) {
-            await db.collection('medications').doc(editingId).update(medData);
-        } else {
-            await db.collection('medications').add(medData);
-        }
+        await db.collection('medications').add(medData);
 
         refreshLetterCache(medData.name);
-        cancelEdit(); 
+        document.getElementById('addMedForm').reset(); // Clear form instantly
         
     } catch (error) {
         console.error("Save Error:", error);
         alert("System Error: Could not save to database.");
     } finally {
         submitBtn.disabled = false;
-        if (!editingId) submitBtn.innerText = "Save to Database";
+        submitBtn.innerText = "Save to Database";
     }
 });
 
-// --- RESTORED: MISSING FUNCTIONS FROM CUTOFF ---
-function startEdit(id) {
-    const med = currentResults.find(m => m.id === id);
-    if (!med) return;
-    
-    document.getElementById('medName').value = med.name;
-    document.getElementById('medCategory').value = med.category;
-    document.getElementById('medInstructions').value = med.instructions;
-    editingId = id;
-    
-    document.getElementById('formTitle').innerText = "Editing: " + med.name;
-    document.getElementById('submitBtn').innerText = "Update Database";
-    document.getElementById('cancelBtn').style.display = "inline-block"; 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function cancelEdit() {
-    editingId = null;
-    document.getElementById('addMedForm').reset();
-    document.getElementById('formTitle').innerText = "Add New Medication";
-    document.getElementById('submitBtn').innerText = "Save to Database";
-    document.getElementById('cancelBtn').style.display = "none";
-}
-
+// --- DELETE LOGIC ---
 async function deleteMed(id, medName) {
     if (confirm(`⚠️ WARNING: Are you sure you want to permanently delete "${medName}"?`)) {
         try {
