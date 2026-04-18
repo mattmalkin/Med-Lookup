@@ -20,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: FirebaseExtended/action-hosting-deploy@v0.9.0
+      - uses: FirebaseExtended/action-hosting-deploy@v0
         id: firebase_deploy  # Added ID to capture outputs
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
