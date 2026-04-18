@@ -159,7 +159,8 @@ async function displayAdmins() {
 }
 
 // --- THE 1-READ MASTER CACHE SCRIPT (Storage Edition) ---
-async function fetchAllMeds() {
+// --- THE 1-READ MASTER CACHE SCRIPT (Storage Edition) ---
+async function fetchAllMeds() {  // <--- The magic 'async' word is right here!
     try {
         // 1. Fetch ONLY the metadata document (Costs exactly 1 Read)
         const metaDoc = await db.collection('system').doc('metadata').get();
@@ -196,25 +197,6 @@ async function fetchAllMeds() {
     } catch (error) {
         console.error("Fetch Error:", error);
         alert("Error fetching database. Are you sure the Cloud Function has generated the JSON?");
-    }
-}
-
-        // 4. If they don't match, we download the fresh database
-        console.log("☁️ Database updated or no cache found. Fetching all medications...");
-        const snapshot = await db.collection('medications').orderBy('name').get();
-        currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Save the new data and the new timestamp locally
-        localStorage.setItem('pacpal_admin_meds_all', JSON.stringify(currentResults));
-        if (serverUpdated) {
-            localStorage.setItem('pacpal_admin_cache_timestamp', serverUpdated);
-        }
-        
-        renderSpreadsheet(currentResults);
-        
-    } catch (error) {
-        console.error("Fetch Error:", error);
-        alert("Error fetching database.");
     }
 }
 
