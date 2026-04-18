@@ -68,7 +68,8 @@
             <hr>
 
             <h2>Current Database</h2>
-            <div id="alphabetContainer" class="alphabet-container"></div>
+            
+            <input type="text" id="searchInput" placeholder="🔍 Search by name, category, or instructions..." style="width: 100%; padding: 12px; font-size: 16px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc;">
             
             <button id="saveBatchBtn" onclick="saveAllChanges()" style="display: none; background-color: #dc3545; border: none; border-radius: 5px; color: white; padding: 10px 20px; font-weight: bold; margin-bottom: 15px; cursor: pointer; width: 100%;">
                 ⚠️ Save Pending Changes
@@ -84,7 +85,8 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
-
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-storage-compat.js"></script>
+    
     <script src="admin.js"></script>
 </body>
 </html>

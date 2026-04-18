@@ -32,8 +32,8 @@ if (themeToggle) {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+const storage = firebase.storage();
 
-let currentLetter = 'A';
 let currentResults = [];
 
 // --- SPREADSHEET TRACKING VARIABLES ---
@@ -45,8 +45,8 @@ auth.onAuthStateChanged(user => {
     if (user) {
         document.getElementById('loginSection').style.display = 'none';
         document.getElementById('dataFormSection').style.display = 'block';
-        buildAlphabet(); 
-        fetchByLetter('A');
+        
+        fetchAllMeds(); // Now fetches the whole database using the smart cache
         displayAdmins();
         loadMailingList();
     } else {
@@ -139,7 +139,6 @@ async function removeMailingEmail(emailToRemove) {
     }
 }
 
-
 // --- ADMIN LIST ---
 async function displayAdmins() {
     const listElement = document.getElementById('admin-list');
@@ -159,68 +158,50 @@ async function displayAdmins() {
     }
 }
 
-// --- MEDICATION ROLODEX LOGIC ---
-function buildAlphabet() {
-    const container = document.getElementById('alphabetContainer');
-    container.innerHTML = '';
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').forEach(letter => {
-        const btn = document.createElement('button');
-        btn.innerText = letter;
-        btn.className = letter === currentLetter ? 'alpha-btn active' : 'alpha-btn';
-        btn.onclick = () => fetchByLetter(letter);
-        container.appendChild(btn);
-    });
-}
-
-async function fetchByLetter(letter) {
-    currentLetter = letter;
-    buildAlphabet(); 
-    
-    document.getElementById('emptyState').style.display = 'none';
-
-    const now = Date.now();
-    const CACHE_LIFETIME_MS = 15 * 60 * 1000; 
-    const cacheKey = `pacpal_admin_meds_${letter}`; 
-    
-    const cachedMeds = localStorage.getItem(cacheKey);
-    const cachedTime = localStorage.getItem('pacpal_admin_cache_time');
-
-    if (cachedMeds && cachedTime && (now - parseInt(cachedTime, 10) < CACHE_LIFETIME_MS)) {
-        console.log(`⚡ Admin loaded letter ${letter} from local cache.`);
-        currentResults = JSON.parse(cachedMeds);
-        renderSpreadsheet(currentResults); // Plugs directly into the spreadsheet
-        return; 
-    }
-
+// --- THE 1-READ MASTER CACHE SCRIPT (Storage Edition) ---
+// --- THE 1-READ MASTER CACHE SCRIPT (Storage Edition) ---
+async function fetchAllMeds() {  // <--- The magic 'async' word is right here!
     try {
-        console.log(`☁️ Admin downloading letter ${letter} from Firebase...`);
-        const snapshot = await db.collection('medications')
-            .where('name', '>=', letter)
-            .where('name', '<=', letter + '\uf8ff')
-            .orderBy('name').get();
-            
-        currentResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // 1. Fetch ONLY the metadata document (Costs exactly 1 Read)
+        const metaDoc = await db.collection('system').doc('metadata').get();
+        const serverUpdated = metaDoc.exists ? metaDoc.data().lastUpdated : null;
         
-        localStorage.setItem(cacheKey, JSON.stringify(currentResults));
-        localStorage.setItem('pacpal_admin_cache_time', now.toString());
+        // 2. Check local browser memory
+        const localUpdated = localStorage.getItem('pacpal_admin_cache_timestamp');
+        const cachedData = localStorage.getItem('pacpal_admin_meds_all');
+
+        // 3. If timestamps match, load from memory instantly!
+        if (cachedData && serverUpdated === localUpdated) {
+            console.log("⚡ Database unchanged. Loading entire grid from local cache (0 Reads).");
+            currentResults = JSON.parse(cachedData);
+            renderSpreadsheet(currentResults);
+            return; 
+        }
+
+        // 4. THE MAGIC: Download the JSON file instead of querying the database!
+        console.log("☁️ Database updated. Downloading JSON from Cloud Storage...");
+        const fileRef = storage.ref('public/medications.json');
+        const url = await fileRef.getDownloadURL();
         
-        renderSpreadsheet(currentResults); // Plugs directly into the spreadsheet
-    } catch (e) { 
-        console.error(e);
-        alert("Error fetching data from Firestore.");
+        const response = await fetch(url);
+        currentResults = await response.json();
+        
+        // Save the new data and the new timestamp locally
+        localStorage.setItem('pacpal_admin_meds_all', JSON.stringify(currentResults));
+        if (serverUpdated) {
+            localStorage.setItem('pacpal_admin_cache_timestamp', serverUpdated);
+        }
+        
+        renderSpreadsheet(currentResults);
+        
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        alert("Error fetching database. Are you sure the Cloud Function has generated the JSON?");
     }
 }
 
-// --- NEW SPREADSHEET RENDERER ---
+// --- SPREADSHEET RENDERER ---
 function renderSpreadsheet(medsArray) {
-    if (medsArray.length === 0) {
-        document.getElementById('emptyState').style.display = 'block';
-        if (medTable) medTable.clearData();
-        return;
-    }
-    
-    document.getElementById('emptyState').style.display = 'none';
-
     if (medTable) {
         medTable.replaceData(medsArray);
         return;
@@ -230,10 +211,12 @@ function renderSpreadsheet(medsArray) {
         data: medsArray, 
         layout: "fitColumns", 
         responsiveLayout: "collapse",
+        pagination: "local", // Adds paging so it doesn't scroll forever
+        paginationSize: 50,  // Show 50 per page
         
         columns: [
-            { title: "Name", field: "name", editor: "input", width: 200 },
-            { title: "Category", field: "category", editor: "input", width: 150 },
+            { title: "Name", field: "name", editor: "input", width: 200, headerFilter: true },
+            { title: "Category", field: "category", editor: "input", width: 150, headerFilter: true },
             { 
                 title: "Clinical Instructions", 
                 field: "instructions", 
@@ -241,7 +224,6 @@ function renderSpreadsheet(medsArray) {
                 formatter: "textarea", 
                 variableHeight: true 
             },
-            // The Delete Button inside the spreadsheet
             {
                 title: "Del", 
                 formatter: "buttonCross", 
@@ -271,6 +253,20 @@ function renderSpreadsheet(medsArray) {
     });
 }
 
+// --- LIVE SEARCH BAR LOGIC ---
+document.getElementById("searchInput").addEventListener("input", function(e) {
+    const term = e.target.value.toLowerCase();
+    
+    if (!medTable) return;
+
+    // Filter across all 3 columns instantly
+    medTable.setFilter(function(data) {
+        return (data.name && data.name.toLowerCase().includes(term)) ||
+               (data.category && data.category.toLowerCase().includes(term)) ||
+               (data.instructions && data.instructions.toLowerCase().includes(term));
+    });
+});
+
 // --- BATCH SAVE LOGIC ---
 async function saveAllChanges() {
     if (Object.keys(pendingEdits).length === 0) return;
@@ -294,9 +290,9 @@ async function saveAllChanges() {
         saveBtn.innerText = "⚠️ Save Pending Changes"; 
         saveBtn.disabled = false;
 
-        // Force a fresh pull of the current letter so the cache matches the database
-        localStorage.removeItem(`pacpal_admin_meds_${currentLetter}`);
-        fetchByLetter(currentLetter);
+        // Invalidate the cache and reload
+        localStorage.removeItem('pacpal_admin_meds_all');
+        fetchAllMeds();
         
         alert("All changes saved successfully!");
 
@@ -309,21 +305,7 @@ async function saveAllChanges() {
     }
 }
 
-// --- CACHE CLEARING HELPER ---
-function refreshLetterCache(medicationName) {
-    if (!medicationName) return;
-    const targetLetter = medicationName.charAt(0).toUpperCase();
-
-    localStorage.removeItem(`pacpal_admin_meds_${targetLetter}`);
-
-    if (currentLetter !== targetLetter) {
-        localStorage.removeItem(`pacpal_admin_meds_${currentLetter}`);
-    }
-
-    fetchByLetter(targetLetter);
-}
-
-// --- NEW MEDICATION ONLY (No more editing from this form) ---
+// --- NEW MEDICATION ENTRY ---
 document.getElementById('addMedForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -343,15 +325,19 @@ document.getElementById('addMedForm').addEventListener('submit', async function(
     try {
         await db.collection('medications').add(medData);
 
-        refreshLetterCache(medData.name);
-        document.getElementById('addMedForm').reset(); // Clear form instantly
+        // Wipe local cache so it downloads the new medication
+        localStorage.removeItem('pacpal_admin_meds_all');
+        document.getElementById('addMedForm').reset(); 
+        
+        // Wait 2 seconds before refreshing so the Cloud Function has time to update the timestamp!
+        setTimeout(fetchAllMeds, 2000); 
         
     } catch (error) {
         console.error("Save Error:", error);
         alert("System Error: Could not save to database.");
     } finally {
         submitBtn.disabled = false;
-        submitBtn.innerText = "Save to Database";
+        submitBtn.innerText = "Add to Database";
     }
 });
 
@@ -361,8 +347,9 @@ async function deleteMed(id, medName) {
         try {
             await db.collection('medications').doc(id).delete();
             
-            // Wipe the cache and instantly fetch the fresh data
-            refreshLetterCache(medName);
+            // Wipe local cache and reload
+            localStorage.removeItem('pacpal_admin_meds_all');
+            setTimeout(fetchAllMeds, 2000);
 
         } catch (error) {
             console.error(error);
