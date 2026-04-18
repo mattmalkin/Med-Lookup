@@ -28,12 +28,12 @@ jobs:
           projectId: 'pacpal-9f9bf'
           channelId: ${{ github.ref_name == 'main' && 'live' || 'dev' }}
 
-      - name: Add Preview Link to Summary
+      - name: Add Deployment Link to Summary
         if: always()
         env:
-          PREVIEW_URL: ${{ steps.firebase_pr_preview.outputs.details_url }}
-          EXPIRY: ${{ steps.firebase_pr_preview.outputs.expire_time }}
+          DEPLOY_URL: ${{ steps.firebase_deploy.outputs.details_url }} 
         run: |
-          echo "### 🛠️ Pull Request Preview" >> $GITHUB_STEP_SUMMARY
-          echo "URL: [$PREVIEW_URL]($PREVIEW_URL)" >> $GITHUB_STEP_SUMMARY
-          echo "Expires: $EXPIRY" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Firebase Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Channel:** ${{ github.ref_name == 'main' && 'live' || 'dev' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** [$DEPLOY_URL]($DEPLOY_URL)" >> $GITHUB_STEP_SUMMARY
