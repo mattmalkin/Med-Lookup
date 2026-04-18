@@ -32,6 +32,7 @@ if (themeToggle) {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+const storage = firebase.storage();
 
 let currentResults = [];
 
@@ -157,7 +158,7 @@ async function displayAdmins() {
     }
 }
 
-// --- THE 1-READ MASTER CACHE SCRIPT ---
+// --- THE 1-READ MASTER CACHE SCRIPT (Storage Edition) ---
 async function fetchAllMeds() {
     try {
         // 1. Fetch ONLY the metadata document (Costs exactly 1 Read)
@@ -175,6 +176,28 @@ async function fetchAllMeds() {
             renderSpreadsheet(currentResults);
             return; 
         }
+
+        // 4. THE MAGIC: Download the JSON file instead of querying the database!
+        console.log("☁️ Database updated. Downloading JSON from Cloud Storage...");
+        const fileRef = storage.ref('public/medications.json');
+        const url = await fileRef.getDownloadURL();
+        
+        const response = await fetch(url);
+        currentResults = await response.json();
+        
+        // Save the new data and the new timestamp locally
+        localStorage.setItem('pacpal_admin_meds_all', JSON.stringify(currentResults));
+        if (serverUpdated) {
+            localStorage.setItem('pacpal_admin_cache_timestamp', serverUpdated);
+        }
+        
+        renderSpreadsheet(currentResults);
+        
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        alert("Error fetching database. Are you sure the Cloud Function has generated the JSON?");
+    }
+}
 
         // 4. If they don't match, we download the fresh database
         console.log("☁️ Database updated or no cache found. Fetching all medications...");
